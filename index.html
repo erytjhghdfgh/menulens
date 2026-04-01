@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MenuLens 🌍</title>
+    <style>
+        /* 1. 기본 초기화 및 모던 폰트 세팅 */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            line-height: 1.5;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* 2. 앱 헤더 타이틀 */
+        .app-header {
+            margin-bottom: 25px;
+            text-align: center;
+        }
+        .app-header h1 {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: #111;
+        }
+        .app-header p {
+            font-size: 0.95rem;
+            color: #666;
+            margin-top: 5px;
+            word-break: keep-all;
+        }
+
+        /* 3. 모던한 카메라 호출 버튼 */
+        .camera-btn {
+            background: linear-gradient(135deg, #ff9800, #f57c00);
+            color: white;
+            padding: 14px 28px;
+            font-size: 1.05rem;
+            font-weight: 700;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(245, 124, 0, 0.3);
+            transition: transform 0.1s, box-shadow 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        .camera-btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 5px rgba(245, 124, 0, 0.3);
+        }
+        #cameraInput { display: none; }
+
+        /* 4. 사진 미리보기 */
+        #preview {
+            max-width: 100%;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            display: none;
+        }
+
+        /* 5. 로딩 애니메이션 */
+        #loading {
+            display: none;
+            margin-top: 10px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #f57c00;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
+        }
+
+        /* 6. 면책 조항 (안내 문구) 박스 */
+        #disclaimer {
+            display: none; 
+            width: 100%;
+            max-width: 600px;
+            background-color: #fff3cd; 
+            color: #856404;
+            padding: 12px 15px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            margin-bottom: 15px;
+            text-align: center;
+            border: 1px solid #ffeeba;
+            line-height: 1.4;
+            word-break: keep-all;
+        }
+
+        /* 7. 결과를 담을 컨테이너 */
+        #resultContainer {
+            width: 100%;
+            max-width: 600px;
+            display: none;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        /* 8. 메뉴 카드 디자인 */
+        .menu-card {
+            background-color: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            transition: transform 0.2s;
+        }
+        .menu-card:hover {
+            transform: translateY(-3px);
+        }
+        .menu-card .title-ko {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #111;
+            margin-bottom: 2px;
+        }
+        .menu-card .title-translated {
+            font-size: 0.95rem;
+            color: #666;
+            font-weight: 500;
+            margin-bottom: 10px;
+        }
+        .menu-card .desc {
+            font-size: 0.9rem;
+            color: #444;
+            line-height: 1.6;
+            margin-bottom: 12px;
+        }
+
+        /* 9. 카드 하단부 (태그 & 버튼 영역) */
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+        }
+        .menu-card .tags {
+            font-size: 1.1rem;
+            background-color: #f8f9fa;
+            padding: 6px 10px;
+            border-radius: 8px;
+            display: inline-flex;
+            gap: 6px;
+        }
+        .search-image-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 8px 14px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #555;
+            background-color: #f1f3f5;
+            border-radius: 20px;
+            text-decoration: none;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+        .search-image-btn:hover {
+            background-color: #e2e6ea;
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-header">
+        <h1 id="appTitle">MenuLens 🔍</h1>
+        <p id="appSlogan">메뉴판을 카메라로 찍으면 음식 정보를 알려드립니다.</p>
+    </div>
+
+    <button class="camera-btn" onclick="document.getElementById('cameraInput').click()">
+        📷 <span id="btnScan">메뉴 스캔하기</span>
+    </button>
+    <input type="file" id="cameraInput" accept="image/*" capture="environment">
+
+    <img id="preview" alt="Menu Photo Preview">
+    
+    <div id="loading">AI가 메뉴를 분석하고 있어요... ⏳</div>
+    
+    <div id="disclaimer">
+        💡 설명과 사진은 일반적인 참고용이며, 식당의 실제 요리와 다를 수 있습니다.
+    </div>
+
+    <div id="resultContainer"></div>
+
+    <script>
+
+        
+        // 🌍 사용자의 브라우저 언어 자동 감지 및 글로벌 다국어 사전 세팅
+        const userLanguage = navigator.language || 'en';
+        const langPrefix = userLanguage.substring(0, 2);
+
+        const uiTranslations = {
+            'ko': {
+                slogan: "메뉴판을 카메라로 찍으면 음식 정보를 알려드립니다.",
+                btn: "메뉴 스캔하기",
+                loading: "AI가 메뉴를 분석하고 있어요... ⏳",
+                disclaimer: "💡 설명과 사진은 일반적인 참고용이며, 식당의 실제 요리와 다를 수 있습니다.",
+                btnSearch: "🔍 사진 보기"
+            },
+            'en': {
+                slogan: "Take a photo of the menu to get dish information.",
+                btn: "Scan Menu",
+                loading: "AI is analyzing the menu... ⏳",
+                disclaimer: "💡 Descriptions and photos are for reference only. Actual dishes may vary.",
+                btnSearch: "🔍 View Photo"
+            },
+            'ja': {
+                slogan: "メニューの写真を撮ると、料理情報が表示されます。",
+                btn: "メニューをスキャン",
+                loading: "AIがメニューを分析しています... ⏳",
+                disclaimer: "💡 説明や写真は参考用であり、実際の料理とは異なる場合があります。",
+                btnSearch: "🔍 写真を見る"
+            },
+            'zh': {
+                slogan: "拍下菜单照片，获取菜品信息。",
+                btn: "扫描菜单",
+                loading: "AI正在分析菜单... ⏳",
+                disclaimer: "💡 描述和照片仅供参考，实际菜品可能有所不同。",
+                btnSearch: "🔍 查看照片"
+            }
+        };
+
+        // 현재 언어 텍스트 가져오기 (사전에 없으면 영어로 Fallback)
+        const currentUI = uiTranslations[langPrefix] || uiTranslations['en'];
+
+        // 앱이 켜질 때 화면 글자들을 사용자 언어로 싹 바꾸기
+        window.onload = function() {
+            document.getElementById('appSlogan').innerText = currentUI.slogan;
+            document.getElementById('btnScan').innerText = currentUI.btn;
+            document.getElementById('loading').innerText = currentUI.loading;
+            document.getElementById('disclaimer').innerText = currentUI.disclaimer;
+        };
+
+        const cameraInput = document.getElementById('cameraInput');
+        const preview = document.getElementById('preview');
+        const resultContainer = document.getElementById('resultContainer');
+        const loading = document.getElementById('loading');
+        const disclaimer = document.getElementById('disclaimer');
+
+        cameraInput.addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // 1. 화면에 찍은 사진 띄우기
+            preview.src = URL.createObjectURL(file);
+            preview.style.display = 'block';
+            
+            // 2. UI 초기화
+            resultContainer.innerHTML = ''; 
+            resultContainer.style.display = 'none';
+            disclaimer.style.display = 'none';
+            loading.style.display = 'block';
+
+            // 3. 사진을 Base64로 변환하여 AI에게 전송
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = function() {
+                const base64Image = reader.result.split(',')[1]; 
+                analyzeMenuWithAI(base64Image);
+            };
+        });
+
+async function analyzeMenuWithAI(base64Data) {
+    const url = '/api/analyze';
+
+    const promptText = `
+        You are a friendly global food expert helper for tourists. 
+        Analyze this restaurant menu image and output the result *ONLY* in the user's preferred locale "${userLanguage}". 
+        Do not add any preamble. Just output the structured list directly.
+
+        Output format for each item:
+        ---CARD_START---
+        ### [Original Menu Name from Image]
+        #### (Translation in "${userLanguage}")
+        **Description:** Clean, appetizing description of ingredients, cooking method, taste, and VISUAL HINTS (e.g., broth/sauce color, temperature) in "${userLanguage}". Max 2 sentences.
+        **Tags:** Use relevant emojis for spiciness (🌶️), meat type (🥩/🐖/🐔/🐟/❌), or vegan (🥬).
+        ---CARD_END---
+    `;
+
+    const requestBody = {
+        contents: [{
+            parts: [
+                { text: promptText },
+                { inline_data: { mime_type: "image/jpeg", data: base64Data } }
+            ]
+        }]
+    };
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody)
+        });
+
+        const rawText = await response.text();
+        let data = null;
+
+        try {
+            data = rawText ? JSON.parse(rawText) : null;
+        } catch (e) {
+            throw new Error(`서버가 JSON이 아닌 응답을 보냈어요: ${rawText.slice(0, 200)}`);
+        }
+
+        if (!response.ok) {
+            throw new Error(`API Error: ${data?.error?.message || rawText || 'Unknown error'}`);
+        }
+
+        const aiResultText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!aiResultText) {
+            throw new Error('AI 응답 형식이 올바르지 않아요.');
+        }
+
+        renderMenuCards(aiResultText);
+
+    } catch (error) {
+        loading.style.display = 'none';
+        resultContainer.innerHTML = `<p style="text-align:center; padding:20px; color:#d9534f;">앗! 오류가 발생했어요.<br>${error.message}</p>`;
+        resultContainer.style.display = 'flex';
+        console.error("요청 실패:", error);
+    }
+}
+
+        // HTML 카드 동적 생성
+        function renderMenuCards(rawText) {
+            loading.style.display = 'none';
+            disclaimer.style.display = 'block'; 
+            resultContainer.style.display = 'flex'; 
+
+            const cardTexts = rawText.split('---CARD_START---').filter(text => text.trim() !== '');
+
+            cardTexts.forEach(cardText => {
+                const cleanedText = cardText.split('---CARD_END---')[0].trim();
+                
+                // 정규식으로 데이터 추출
+                const titleOriginal = cleanedText.match(/###\s*(.*)/)?.[1] || 'Unknown';
+                const titleTranslated = cleanedText.match(/####\s*\((.*)\)/)?.[1] || '';
+                const desc = cleanedText.match(/\*\*Description:\*\*\s*(.*)/)?.[1] || '';
+                const tags = cleanedText.match(/\*\*Tags:\*\*\s*(.*)/)?.[1] || '';
+
+                // ★ 글로벌 검색어: 원문 + ' dish'
+                const searchKeyword = titleOriginal + ' dish'; 
+                const searchUrl = `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(searchKeyword)}`;
+
+                const cardDiv = document.createElement('div');
+                cardDiv.className = 'menu-card';
+                
+                // 🕵️‍♂️ 변수명 오류 해결 완료 및 다국어 버튼 반영
+                cardDiv.innerHTML = `
+                    <div class="title-ko">${titleOriginal}</div>
+                    ${titleTranslated ? `<div class="title-translated">${titleTranslated}</div>` : ''}
+                    ${desc ? `<div class="desc">${desc}</div>` : ''}
+                    <div class="card-footer">
+                        ${tags ? `<div class="tags">${tags}</div>` : '<div></div>'}
+                        <a href="${searchUrl}" target="_blank" class="search-image-btn">${currentUI.btnSearch}</a>
+                    </div>
+                `;
+
+                resultContainer.appendChild(cardDiv);
+            });
+        }
+    </script>
+</body>
+</html>
