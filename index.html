@@ -53,7 +53,7 @@
     <!-- 🔥 Firebase SDK 도구 불러오기 -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-    <script src="https://unpkg.com/tesseract.js@v2.1.0/dist/tesseract.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
 
@@ -141,7 +141,7 @@
             reader.readAsDataURL(file);
             reader.onload = function() {
                 const base64Image = reader.result.split(',')[1]; 
-                analyzeMenuWithAI(base64Image);
+                analyzeMenuWithAI(base64Image, file);
             };
         });
 
