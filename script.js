@@ -71,7 +71,7 @@ async function analyzeMenuWithAI(base64Data) {
 
         ---CARD_START---
         **OriginalName:** Extract ONLY the main local name.
-        **Subtitles:** Extract other foreign names, descriptions, or calories (e.g., 2370 cal). If none, write "None".
+        **Subtitles:** Extract other names or descriptions (e.g., origin, weight, calories) and TRANSLATE them into "${userLanguage}". If none, write "None".
         **TranslatedName:** Translation of the main name in "${userLanguage}".
         **CurrencyCode:** 3-letter currency code (e.g., USD, KRW, CNY). If no symbol is present, GUESS the most likely currency based on the language/context of the menu. If completely unknown, write "Unknown".
         **Price:** Extract the price. If there are multiple options/prices (e.g., "8 oz. Single 54 | Petite Twin Tails 52"), extract ALL of them exactly as written. If no price, write "None".
@@ -199,3 +199,36 @@ async function parseAndRender(rawText) {
         resultContainer.appendChild(cardDiv);
     }
 }
+const uiTranslations = {
+    'ko': {
+        title: "MenuLens 🔍",
+        slogan: "메뉴판을 카메라로 찍으면 정보를 알려드립니다.",
+        btn: "메뉴 스캔하기",
+        loading: "AI가 메뉴를 분석하고 있어요... ⏳",
+        disclaimer: "💡 설명은 참고용이며, 실제 식당 요리와 다를 수 있습니다."
+    },
+    'en': {
+        title: "MenuLens 🔍",
+        slogan: "Snap a photo of the menu to get details.",
+        btn: "Scan Menu",
+        loading: "AI is analyzing the menu... ⏳",
+        disclaimer: "💡 Descriptions are for reference only and may vary from actual dishes."
+    },
+    'ja': {
+        title: "MenuLens 🔍",
+        slogan: "メニューを撮影すると情報が表示されます。",
+        btn: "メニュー를스캔",
+        loading: "AI가 메뉴를 분석하고 있습니다... ⏳",
+        disclaimer: "💡 説明は参考用であり、実際の料理と異なる場合があります。"
+    }
+};
+
+// 언어 설정 (없으면 영어)
+const currentLang = uiTranslations[langPrefix] ? langPrefix : 'en';
+
+// 화면 글자 변경
+document.getElementById('appTitle').innerText = uiTranslations[currentLang].title;
+document.getElementById('appSlogan').innerText = uiTranslations[currentLang].slogan;
+document.getElementById('btnScan').innerText = uiTranslations[currentLang].btn;
+document.getElementById('loading').innerText = uiTranslations[currentLang].loading;
+document.getElementById('disclaimer').innerText = uiTranslations[currentLang].disclaimer;
