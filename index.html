@@ -294,7 +294,7 @@ async function analyzeMenuWithAI(base64Data, file) {
             description: desc,
             warning: warning,
             languageSaved: langPrefix, // 언어별로 따로 저장
-            originalCurrency: detectedCurrency, // 인식된 화폐 저장
+            originalCurrency: currencyRaw !== 'None' ? currencyRaw : null,
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
 }).then(() => {
                     console.log(`[Firestore 저장 완료] ${titleOriginal}`);
