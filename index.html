@@ -168,24 +168,21 @@ async function analyzeMenuWithAI(base64Data, file) {
         // --- [하이브리드 3단계] 창고에 없으면 제미나이 호출 ---
         const url = '/api/analyze';
     
-// 🔥 업그레이드된 AI 프롬프트 (화폐 단위 추출 기능 추가)
+// 🔥 업그레이드된 AI 프롬프트 (메인 이름과 부제목 완벽 분리)
             const promptText = `
-                You are a friendly global food expert helper for tourists. 
-                Analyze this restaurant menu image and output the result *ONLY* in the user's preferred locale "${userLanguage}". 
-                Do not add any preamble. Just output the structured list directly.
-
-                Output format for each item:
+                You are a food expert. Analyze this menu. 
+                Output locale: "${userLanguage}".
                 ---CARD_START---
-                ### [Original Menu Name from Image]
+                ### [Primary Original Name] (Extract ONLY the main local name, e.g., 天然海蜇 or 설렁탕)
+                **Subtitles:** Extract other foreign names/descriptions written on the menu (e.g., クラゲの唐辛子和え / Natural Jelly Fish). If none, write "None".
                 #### (Translation in "${userLanguage}")
-                **Currency:** Detect the original currency symbol or code from the menu (e.g., KRW, CNY, USD, JPY, ¥, $, 원). If none is found, write "None".
-                **Price:** Extract only the number (e.g., 15000). If no price is found, write "None".
-                **Description:** Clean, appetizing description in "${userLanguage}". Max 2 sentences.
-                **Warning:** If the food contains Beef, Pork, Seafood, Peanuts, or Dairy, state it clearly (e.g., "Contains Beef (Not suitable for Hindus)"). If none, write "None".
-                **Tags:** Use relevant emojis for spiciness (🌶️), meat type (🥩/🐖/🐔/🐟/❌), or vegan (🥬).
+                **Currency:** Detect the original currency symbol or code (e.g., KRW, CNY, USD). If none, write "None".
+                **Price:** Extract only the number. If none, write "None".
+                **Description:** 2 appetizing sentences in "${userLanguage}".
+                **Warning:** Allergies and religious restrictions. If none, write "None".
+                **Tags:** Relevant emojis.
                 ---CARD_END---
             `;
-
             const requestBody = {
                 contents: [{
                     parts: [
@@ -230,9 +227,11 @@ async function analyzeMenuWithAI(base64Data, file) {
             cardTexts.forEach(cardText => {
                 const cleanedText = cardText.split('---CARD_END---')[0].trim();
                 
-                // 데이터 추출
+                // 🔥 데이터 추출 (부제목 추가)
                 const titleOriginal = cleanedText.match(/###\s*(.*)/)?.[1] || 'Unknown';
+                const subtitles = cleanedText.match(/\*\*Subtitles:\*\*\s*(.*)/)?.[1] || 'None';
                 const titleTranslated = cleanedText.match(/####\s*\((.*)\)/)?.[1] || '';
+                const currencyRaw = cleanedText.match(/\*\*Currency:\*\*\s*(.*)/)?.[1] || 'None';
                 const priceRaw = cleanedText.match(/\*\*Price:\*\*\s*(.*)/)?.[1] || 'None';
                 const desc = cleanedText.match(/\*\*Description:\*\*\s*(.*)/)?.[1] || '';
                 const warning = cleanedText.match(/\*\*Warning:\*\*\s*(.*)/)?.[1] || 'None';
@@ -240,15 +239,17 @@ async function analyzeMenuWithAI(base64Data, file) {
 
                 // --- 💰 가격 + 환율 로직 ---
                 let priceDisplay = `<div class="price" style="color:#999; font-size:0.9rem;">가격 정보 없음</div>`;
-                const numberOnlyPrice = priceRaw.replace(/[^0-9]/g, ''); // 숫자만 남기기
+                const numberOnlyPrice = priceRaw.replace(/[^0-9]/g, ''); 
                 
                 if (priceRaw !== 'None' && numberOnlyPrice !== '') {
-                    const krwPrice = parseInt(numberOnlyPrice);
-                    if (langPrefix === 'ko') {
-                        priceDisplay = `<div class="price">${krwPrice.toLocaleString()}원</div>`;
+                    const localPrice = parseInt(numberOnlyPrice);
+                    if (langPrefix === 'ko' && currencyRaw.includes('KRW')) {
+                        priceDisplay = `<div class="price">${localPrice.toLocaleString()}원</div>`;
                     } else {
-                        const converted = (krwPrice * exchangeRate).toFixed(2);
-                        priceDisplay = `<div class="price">${krwPrice.toLocaleString()}원 <span class="exchange">(≈ ${targetCurrency.symbol}${converted})</span></div>`;
+                        const converted = (localPrice * exchangeRate).toFixed(2);
+                        // 메뉴판 원본 단위(예: 위안)를 함께 표시
+                        const currencySymbol = currencyRaw !== 'None' ? currencyRaw : '';
+                        priceDisplay = `<div class="price">${currencySymbol} ${localPrice.toLocaleString()} <span class="exchange">(≈ ${targetCurrency.symbol}${converted})</span></div>`;
                     }
                 }
 
@@ -258,12 +259,21 @@ async function analyzeMenuWithAI(base64Data, file) {
                     warningDisplay = `<div class="warning">⚠️ 주의: ${warning}</div>`;
                 }
 
-                // --- 화면에 카드 그리기 ---
+                // --- 📝 메뉴판 부제목(기타 외국어) 로직 ---
+                let subtitlesDisplay = '';
+                if (subtitles !== 'None') {
+                    subtitlesDisplay = `<div style="font-size: 0.85rem; color: #888; margin-bottom: 8px;">${subtitles}</div>`;
+                }
+
+                // --- 🔍 구글 검색 URL (오직 메인 이름 + dish) ---
                 const searchUrl = `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(titleOriginal + ' dish')}`;
+
+                // --- 화면에 카드 그리기 ---
                 const cardDiv = document.createElement('div');
                 cardDiv.className = 'menu-card';
                 cardDiv.innerHTML = `
                     <div class="title-ko">${titleOriginal}</div>
+                    ${subtitlesDisplay}
                     ${titleTranslated ? `<div class="title-translated">${titleTranslated}</div>` : ''}
                     ${priceDisplay}
                     ${warningDisplay}
@@ -274,6 +284,8 @@ async function analyzeMenuWithAI(base64Data, file) {
                     </div>
                 `;
                 resultContainer.appendChild(cardDiv);
+
+                // ... (이후 파이어베이스 저장 로직은 기존과 동일) ...
 
 // 저장 시 priceRaw 삭제
         db.collection("menu_database").add({
