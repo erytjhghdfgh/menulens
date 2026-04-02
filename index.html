@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>MenuLens 🌍</title>
     <style>
-        /* 1. 기본 초기화 및 폰트 세팅 */
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -16,7 +15,6 @@
         .app-header h1 { font-size: 1.6rem; font-weight: 800; color: #111; }
         .app-header p { font-size: 0.95rem; color: #666; margin-top: 5px; word-break: keep-all; }
 
-        /* 2. 카메라 버튼 및 로딩/알림 UI */
         .camera-btn {
             background: linear-gradient(135deg, #ff9800, #f57c00); color: white;
             padding: 14px 28px; font-size: 1.05rem; font-weight: 700; border: none;
@@ -33,13 +31,11 @@
             padding: 12px 15px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 15px; text-align: center; border: 1px solid #ffeeba;
         }
 
-        /* 3. 결과 카드 디자인 */
         #resultContainer { width: 100%; max-width: 600px; display: none; flex-direction: column; gap: 15px; }
         .menu-card { background-color: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
         .menu-card .title-ko { font-size: 1.15rem; font-weight: 800; color: #111; margin-bottom: 2px; }
         .menu-card .title-translated { font-size: 0.95rem; color: #666; font-weight: 500; margin-bottom: 8px; }
         
-        /* 추가된 디자인 (가격, 주의사항) */
         .menu-card .price { font-weight: 800; font-size: 1.15rem; color: #e65100; margin-bottom: 10px; }
         .menu-card .price .exchange { font-size: 0.9rem; color: #777; font-weight: 500; }
         .menu-card .warning { background-color: #ffebee; color: #c62828; padding: 8px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; margin-bottom: 12px; }
@@ -49,11 +45,6 @@
         .menu-card .tags { font-size: 1.1rem; background-color: #f8f9fa; padding: 6px 10px; border-radius: 8px; display: inline-flex; gap: 6px; }
         .search-image-btn { display: inline-flex; align-items: center; padding: 8px 14px; font-size: 0.85rem; font-weight: 600; color: #555; background-color: #f1f3f5; border-radius: 20px; text-decoration: none; }
     </style>
-
-    <!-- 🔥 Firebase SDK 도구 불러오기 -->
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
 
@@ -75,49 +66,52 @@
 
     <script>
         // ==========================================
-        // 1. Firebase 연동 세팅
-        // ==========================================
-        const firebaseConfig = {
-            apiKey: "AIzaSyDwOlD5REeQ_mjf4M_osDEBRW7NbZvKuX8",
-            authDomain: "menulens-80e04.firebaseapp.com",
-            projectId: "menulens-80e04",
-            storageBucket: "menulens-80e04.firebasestorage.app",
-            messagingSenderId: "316749317909",
-            appId: "1:316749317909:web:62b25be966ca99cb07cb1c",
-            measurementId: "G-BHDDRNKBVT"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-
-        // ==========================================
-        // 2. 다국어 및 무료 환율 계산기 세팅
+        // 1. 다국어 및 환율 설정
         // ==========================================
         const userLanguage = navigator.language || 'en';
         const langPrefix = userLanguage.substring(0, 2);
 
         const currencyMap = {
-            'en': { code: 'USD', symbol: '$' },
+            'ko': { code: 'KRW', symbol: '₩' },
             'ja': { code: 'JPY', symbol: '¥' },
             'zh': { code: 'CNY', symbol: '¥' },
-            'ko': { code: 'KRW', symbol: '원' }
+            'en': { code: 'USD', symbol: '$' },
+            'de': { code: 'EUR', symbol: '€' },
+            'fr': { code: 'EUR', symbol: '€' },
+            'es': { code: 'EUR', symbol: '€' },
+            'th': { code: 'THB', symbol: '฿' },
+            'vi': { code: 'VND', symbol: '₫' },
         };
-        const targetCurrency = currencyMap[langPrefix] || currencyMap['en'];
-        let exchangeRate = 1;
+        const userCurrency = currencyMap[langPrefix] || currencyMap['en'];
 
-        async function fetchExchangeRate() {
-            if (langPrefix === 'ko') return; // 한국어면 환율 계산 불필요
+        const originCurrencyToCode = {
+            'KRW': 'KRW', '원': 'KRW', '₩': 'KRW',
+            'JPY': 'JPY', '¥': 'JPY',
+            'CNY': 'CNY',
+            'USD': 'USD', '$': 'USD',
+            'EUR': 'EUR', '€': 'EUR',
+            'THB': 'THB', '฿': 'THB',
+            'VND': 'VND', '₫': 'VND',
+        };
+
+        const rateCache = {};
+        async function getExchangeRate(fromCode, toCode) {
+            if (fromCode === toCode) return 1;
+            const key = `${fromCode}_${toCode}`;
+            if (rateCache[key]) return rateCache[key];
             try {
-                const res = await fetch(`https://api.frankfurter.app/latest?from=KRW&to=${targetCurrency.code}`);
+                const res = await fetch(`https://api.frankfurter.app/latest?from=${fromCode}&to=${toCode}`);
                 const data = await res.json();
-                exchangeRate = data.rates[targetCurrency.code];
+                const rate = data.rates?.[toCode];
+                if (rate) rateCache[key] = rate;
+                return rate || null;
             } catch (e) {
-                console.error("환율 API 호출 실패:", e);
+                return null;
             }
         }
-        fetchExchangeRate(); // 앱 켜지자마자 몰래 환율 가져오기
 
         // ==========================================
-        // 3. 카메라 사진 업로드 및 AI 요청
+        // 2. 카메라 업로드
         // ==========================================
         const cameraInput = document.getElementById('cameraInput');
         const preview = document.getElementById('preview');
@@ -131,8 +125,7 @@
 
             preview.src = URL.createObjectURL(file);
             preview.style.display = 'block';
-            
-            resultContainer.innerHTML = ''; 
+            resultContainer.innerHTML = '';
             resultContainer.style.display = 'none';
             disclaimer.style.display = 'none';
             loading.style.display = 'block';
@@ -140,52 +133,34 @@
             const reader = new FileReader();
             reader.readAsDataURL(file);
             reader.onload = function() {
-                const base64Image = reader.result.split(',')[1]; 
-                analyzeMenuWithAI(base64Image, file);
+                const base64Image = reader.result.split(',')[1];
+                analyzeMenuWithAI(base64Image);
             };
         });
 
-   
-async function analyzeMenuWithAI(base64Data, file) {
-        // --- [하이브리드 1단계] 무료 OCR로 글자 먼저 읽기 ---
-        const ocrResult = await Tesseract.recognize(file, 'kor+eng');
-        const detectedText = ocrResult.data.text.trim().split('\n')[0]; // 첫 줄 글자 추출 (예: "설렁탕")
-
-        // --- [하이브리드 2단계] 파이어베이스 창고 뒤지기 ---
-        const cache = await db.collection("menu_database")
-            .where("originalName", "==", detectedText)
-            .where("languageSaved", "==", langPrefix)
-            .get();
-
-        if (!cache.empty) {
-            // 🎉 창고에 데이터가 있는 경우 (비용 0원!)
-            console.log("⚡ 파이어베이스 창고에서 무료로 가져옴!");
-            const cachedData = cache.docs[0].data();
-            renderFromCache(cachedData); 
-            return; 
-        }
-
-        // --- [하이브리드 3단계] 창고에 없으면 제미나이 호출 ---
-        const url = '/api/analyze';
-    
-// 🔥 업그레이드된 AI 프롬프트 (메인 이름과 부제목 완벽 분리)
-// 🔥 1. 특수기호를 없애고 절대 헷갈리지 않게 만든 철통보안 프롬프트
+        // ==========================================
+        // 3. AI 분석 (사진 → AI → 바로 출력)
+        // ==========================================
+        async function analyzeMenuWithAI(base64Data) {
             const promptText = `
-                You are a global food expert helper. Analyze this menu image. 
+                You are a global food expert helper. Analyze this menu image.
                 Output locale: "${userLanguage}".
                 Do NOT output my instructions or placeholders. Only output the actual extracted data.
 
+                For EACH menu item visible, output one block:
+
                 ---CARD_START---
                 **OriginalName:** Extract ONLY the main local name (e.g., 天然海蜇 or 설렁탕).
-                **Subtitles:** Extract other foreign names/descriptions. If none, write "None".
+                **Subtitles:** Extract other foreign names/descriptions on the menu. If none, write "None".
                 **TranslatedName:** Translation of the main name in "${userLanguage}".
-                **Currency:** Original currency symbol or code (e.g., KRW, CNY, USD, ¥). If none, write "None".
+                **OriginalCurrency:** Currency code or symbol shown on the menu (e.g., KRW, CNY, USD, ¥, 원). If none, write "None".
                 **Price:** Extract only the number. If none, write "None".
                 **Description:** Clean, appetizing description in "${userLanguage}". Max 2 sentences.
                 **Warning:** Allergies and religious restrictions. If none, write "None".
                 **Tags:** Relevant emojis (e.g., 🌶️, 🥩).
                 ---CARD_END---
             `;
+
             const requestBody = {
                 contents: [{
                     parts: [
@@ -196,7 +171,7 @@ async function analyzeMenuWithAI(base64Data, file) {
             };
 
             try {
-                const response = await fetch(url, {
+                const response = await fetch('/api/analyze', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(requestBody)
@@ -205,10 +180,10 @@ async function analyzeMenuWithAI(base64Data, file) {
                 const rawText = await response.text();
                 const data = JSON.parse(rawText);
                 const aiResultText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-                
+
                 if (!aiResultText) throw new Error('AI 응답을 읽을 수 없습니다.');
 
-                parseAndRenderAndSave(aiResultText);
+                await parseAndRender(aiResultText);
 
             } catch (error) {
                 loading.style.display = 'none';
@@ -218,113 +193,83 @@ async function analyzeMenuWithAI(base64Data, file) {
         }
 
         // ==========================================
-        // 4. 화면에 그리기 + Firebase 저장 (핵심 파이프라인)
+        // 4. 파싱 + 환율 변환 + 렌더링
         // ==========================================
-        function parseAndRenderAndSave(rawText) {
+        async function parseAndRender(rawText) {
             loading.style.display = 'none';
-            disclaimer.style.display = 'block'; 
-            resultContainer.style.display = 'flex'; 
+            disclaimer.style.display = 'block';
+            resultContainer.style.display = 'flex';
 
-            const cardTexts = rawText.split('---CARD_START---').filter(text => text.trim() !== '');
+            const cardTexts = rawText.split('---CARD_START---').filter(text => text.includes('---CARD_END---'));
 
-            cardTexts.forEach(cardText => {
-                const cleanedText = cardText.split('---CARD_END---')[0].trim();
-                
-                // 🔥 데이터 추출 (부제목 추가)
-// 🔥 2. 바뀐 프롬프트 규칙에 맞춰서 데이터 정확하게 뽑아내기
-                const titleOriginal = cleanedText.match(/\*\*OriginalName:\*\*\s*(.*)/)?.[1] || 'Unknown';
-                const subtitles = cleanedText.match(/\*\*Subtitles:\*\*\s*(.*)/)?.[1] || 'None';
-                const titleTranslated = cleanedText.match(/\*\*TranslatedName:\*\*\s*(.*)/)?.[1] || '';
-                const currencyRaw = cleanedText.match(/\*\*Currency:\*\*\s*(.*)/)?.[1] || 'None';
-                const priceRaw = cleanedText.match(/\*\*Price:\*\*\s*(.*)/)?.[1] || 'None';
-                const desc = cleanedText.match(/\*\*Description:\*\*\s*(.*)/)?.[1] || '';
-                const warning = cleanedText.match(/\*\*Warning:\*\*\s*(.*)/)?.[1] || 'None';
-                const tags = cleanedText.match(/\*\*Tags:\*\*\s*(.*)/)?.[1] || '';
+            for (const cardText of cardTexts) {
+                const cleaned = cardText.split('---CARD_END---')[0].trim();
 
-                // --- 💰 가격 + 환율 로직 ---
+                const get = (field) =>
+                    (cleaned.match(new RegExp(`\\*\\*${field}:\\*\\*\\s*(.+)`)) || [])[1]?.trim() || 'None';
+
+                const titleOriginal   = get('OriginalName');
+                const subtitles       = get('Subtitles');
+                const titleTranslated = get('TranslatedName');
+                const currencyRaw     = get('OriginalCurrency');
+                const priceRaw        = get('Price');
+                const desc            = get('Description');
+                const warning         = get('Warning');
+                const tags            = get('Tags');
+
+                // --- 가격 + 환율 ---
                 let priceDisplay = `<div class="price" style="color:#999; font-size:0.9rem;">가격 정보 없음</div>`;
-                const numberOnlyPrice = priceRaw.replace(/[^0-9]/g, ''); 
-                
-                if (priceRaw !== 'None' && numberOnlyPrice !== '') {
-                    const localPrice = parseInt(numberOnlyPrice);
-                    if (langPrefix === 'ko' && currencyRaw.includes('KRW')) {
-                        priceDisplay = `<div class="price">${localPrice.toLocaleString()}원</div>`;
-                    } else {
-                        const converted = (localPrice * exchangeRate).toFixed(2);
-                        // 메뉴판 원본 단위(예: 위안)를 함께 표시
-                        const currencySymbol = currencyRaw !== 'None' ? currencyRaw : '';
-                        priceDisplay = `<div class="price">${currencySymbol} ${localPrice.toLocaleString()} <span class="exchange">(≈ ${targetCurrency.symbol}${converted})</span></div>`;
+                const priceNum = parseFloat(priceRaw.replace(/[^0-9.]/g, ''));
+
+                if (priceRaw !== 'None' && !isNaN(priceNum)) {
+                    const originCode = originCurrencyToCode[currencyRaw] || 'KRW';
+                    const displayCurrency = currencyRaw !== 'None' ? currencyRaw : '';
+                    const formattedOrigin = priceNum.toLocaleString();
+
+                    let exchangeHTML = '';
+                    if (originCode !== userCurrency.code) {
+                        const rate = await getExchangeRate(originCode, userCurrency.code);
+                        if (rate) {
+                            const converted = priceNum * rate;
+                            const formatted = converted < 10
+                                ? converted.toFixed(2)
+                                : Math.round(converted).toLocaleString();
+                            exchangeHTML = `<span class="exchange">(≈ ${userCurrency.symbol}${formatted})</span>`;
+                        }
                     }
+
+                    priceDisplay = `<div class="price">${displayCurrency} ${formattedOrigin} ${exchangeHTML}</div>`;
                 }
 
-                // --- ⚠️ 주의사항 로직 ---
-                let warningDisplay = '';
-                if (warning !== 'None') {
-                    warningDisplay = `<div class="warning">⚠️ 주의: ${warning}</div>`;
-                }
+                // --- 주의사항 ---
+                const warningDisplay = warning !== 'None'
+                    ? `<div class="warning">⚠️ 주의: ${warning}</div>`
+                    : '';
 
-                // --- 📝 메뉴판 부제목(기타 외국어) 로직 ---
-                let subtitlesDisplay = '';
-                if (subtitles !== 'None') {
-                    subtitlesDisplay = `<div style="font-size: 0.85rem; color: #888; margin-bottom: 8px;">${subtitles}</div>`;
-                }
+                // --- 부제목 ---
+                const subtitlesDisplay = subtitles !== 'None'
+                    ? `<div style="font-size:0.85rem; color:#888; margin-bottom:8px;">${subtitles}</div>`
+                    : '';
 
-                // --- 🔍 구글 검색 URL (오직 메인 이름 + dish) ---
                 const searchUrl = `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(titleOriginal + ' dish')}`;
 
-                // --- 화면에 카드 그리기 ---
                 const cardDiv = document.createElement('div');
                 cardDiv.className = 'menu-card';
                 cardDiv.innerHTML = `
                     <div class="title-ko">${titleOriginal}</div>
                     ${subtitlesDisplay}
-                    ${titleTranslated ? `<div class="title-translated">${titleTranslated}</div>` : ''}
+                    ${titleTranslated !== 'None' ? `<div class="title-translated">${titleTranslated}</div>` : ''}
                     ${priceDisplay}
                     ${warningDisplay}
-                    ${desc ? `<div class="desc">${desc}</div>` : ''}
+                    ${desc !== 'None' ? `<div class="desc">${desc}</div>` : ''}
                     <div class="card-footer">
-                        ${tags ? `<div class="tags">${tags}</div>` : '<div></div>'}
+                        ${tags !== 'None' ? `<div class="tags">${tags}</div>` : '<div></div>'}
                         <a href="${searchUrl}" target="_blank" class="search-image-btn">🔍 사진 보기</a>
                     </div>
                 `;
                 resultContainer.appendChild(cardDiv);
-
-                // ... (이후 파이어베이스 저장 로직은 기존과 동일) ...
-
-// 저장 시 priceRaw 삭제
-        db.collection("menu_database").add({
-            originalName: titleOriginal,
-            translatedName: titleTranslated,
-            description: desc,
-            warning: warning,
-            languageSaved: langPrefix, // 언어별로 따로 저장
-            originalCurrency: currencyRaw !== 'None' ? currencyRaw : null,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-}).then(() => {
-                    console.log(`[Firestore 저장 완료] ${titleOriginal}`);
-                }).catch((error) => {
-                    console.error("데이터 저장 실패:", error);
-                });
-            }); // ⚠️ 잃어버렸던 forEach 닫기 괄호가 여기 있습니다!
+            }
         }
-
-    function renderFromCache(data) {
-        loading.style.display = 'none';
-        resultContainer.style.display = 'flex';
-        // 캐시된 데이터로 화면을 그리는 로직...
-        const cardDiv = document.createElement('div');
-        cardDiv.className = 'menu-card';
-        cardDiv.innerHTML = `
-            <div class="title-ko">${data.originalName}</div>
-            <div class="title-translated">${data.translatedName}</div>
-            <div class="desc">${data.description}</div>
-            <div class="card-footer">
-                <div class="tags">${data.tags}</div>
-                <div style="color: #2196F3; font-weight: bold;">✅ Verified Info</div>
-            </div>
-        `;
-        resultContainer.appendChild(cardDiv);
-    }
     </script>
 </body>
 </html>
