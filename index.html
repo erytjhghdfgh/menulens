@@ -169,18 +169,21 @@ async function analyzeMenuWithAI(base64Data, file) {
         const url = '/api/analyze';
     
 // 🔥 업그레이드된 AI 프롬프트 (메인 이름과 부제목 완벽 분리)
+// 🔥 1. 특수기호를 없애고 절대 헷갈리지 않게 만든 철통보안 프롬프트
             const promptText = `
-                You are a food expert. Analyze this menu. 
+                You are a global food expert helper. Analyze this menu image. 
                 Output locale: "${userLanguage}".
+                Do NOT output my instructions or placeholders. Only output the actual extracted data.
+
                 ---CARD_START---
-                ### [Primary Original Name] (Extract ONLY the main local name, e.g., 天然海蜇 or 설렁탕)
-                **Subtitles:** Extract other foreign names/descriptions written on the menu (e.g., クラゲの唐辛子和え / Natural Jelly Fish). If none, write "None".
-                #### (Translation in "${userLanguage}")
-                **Currency:** Detect the original currency symbol or code (e.g., KRW, CNY, USD). If none, write "None".
+                **OriginalName:** Extract ONLY the main local name (e.g., 天然海蜇 or 설렁탕).
+                **Subtitles:** Extract other foreign names/descriptions. If none, write "None".
+                **TranslatedName:** Translation of the main name in "${userLanguage}".
+                **Currency:** Original currency symbol or code (e.g., KRW, CNY, USD, ¥). If none, write "None".
                 **Price:** Extract only the number. If none, write "None".
-                **Description:** 2 appetizing sentences in "${userLanguage}".
+                **Description:** Clean, appetizing description in "${userLanguage}". Max 2 sentences.
                 **Warning:** Allergies and religious restrictions. If none, write "None".
-                **Tags:** Relevant emojis.
+                **Tags:** Relevant emojis (e.g., 🌶️, 🥩).
                 ---CARD_END---
             `;
             const requestBody = {
@@ -228,9 +231,10 @@ async function analyzeMenuWithAI(base64Data, file) {
                 const cleanedText = cardText.split('---CARD_END---')[0].trim();
                 
                 // 🔥 데이터 추출 (부제목 추가)
-                const titleOriginal = cleanedText.match(/###\s*(.*)/)?.[1] || 'Unknown';
+// 🔥 2. 바뀐 프롬프트 규칙에 맞춰서 데이터 정확하게 뽑아내기
+                const titleOriginal = cleanedText.match(/\*\*OriginalName:\*\*\s*(.*)/)?.[1] || 'Unknown';
                 const subtitles = cleanedText.match(/\*\*Subtitles:\*\*\s*(.*)/)?.[1] || 'None';
-                const titleTranslated = cleanedText.match(/####\s*\((.*)\)/)?.[1] || '';
+                const titleTranslated = cleanedText.match(/\*\*TranslatedName:\*\*\s*(.*)/)?.[1] || '';
                 const currencyRaw = cleanedText.match(/\*\*Currency:\*\*\s*(.*)/)?.[1] || 'None';
                 const priceRaw = cleanedText.match(/\*\*Price:\*\*\s*(.*)/)?.[1] || 'None';
                 const desc = cleanedText.match(/\*\*Description:\*\*\s*(.*)/)?.[1] || '';
