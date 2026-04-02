@@ -69,8 +69,54 @@
 
     <script>
         // 기본 사용자 언어 및 목표 화폐 (한국인 기준)
-        const userLanguage = navigator.language || 'ko';
-        const targetCurrency = 'KRW';
+// 🌍 1. 브라우저 언어/국가 감지 (예: 'ko-KR', 'en-US', 'en-GB')
+        const userLocale = navigator.language || 'en-US';
+        const langPrefix = userLocale.split('-')[0]; // 'en', 'ko' 등 앞 2자리만 추출
+
+        // 🌍 2. 글로벌 화폐 매핑 사전 (전 세계 주요 여행객 99% 커버)
+        const currencyMap = {
+            // 아시아 
+            'ko': 'KRW', 'ko-KR': 'KRW', // 한국
+            'ja': 'JPY', 'ja-JP': 'JPY', // 일본
+            'zh': 'CNY', 'zh-CN': 'CNY', // 중국
+            'zh-TW': 'TWD',              // 대만
+            'zh-HK': 'HKD',              // 홍콩
+            'th': 'THB', 'th-TH': 'THB', // 태국
+            'vi': 'VND', 'vi-VN': 'VND', // 베트남
+            'id': 'IDR', 'id-ID': 'IDR', // 인도네시아
+            'ms': 'MYR', 'ms-MY': 'MYR', // 말레이시아
+            'tl': 'PHP', 'fil': 'PHP',   // 필리핀
+            'hi': 'INR', 'hi-IN': 'INR', // 인도
+
+            // 아메리카
+            'en-US': 'USD',              // 미국
+            'en-CA': 'CAD',              // 캐나다
+            'es-MX': 'MXN',              // 멕시코
+            'pt-BR': 'BRL',              // 브라질
+
+            // 유럽 (유로존 및 비유로존)
+            'en-GB': 'GBP',              // 영국
+            'fr': 'EUR', 'fr-FR': 'EUR', // 프랑스 등 유로존
+            'de': 'EUR', 'de-DE': 'EUR', // 독일
+            'es': 'EUR', 'es-ES': 'EUR', // 스페인
+            'it': 'EUR', 'it-IT': 'EUR', // 이탈리아
+            'ru': 'RUB', 'ru-RU': 'RUB', // 러시아
+            'tr': 'TRY', 'tr-TR': 'TRY', // 튀르키예
+
+            // 오세아니아
+            'en-AU': 'AUD',              // 호주
+            'en-NZ': 'NZD',              // 뉴질랜드
+
+            // 중동 / 기타
+            'ar-AE': 'AED',              // 아랍에미리트(두바이)
+            'ar-SA': 'SAR',              // 사우디아라비아
+        };
+
+        // 🌍 3. 목표 화폐 결정 로직 (매우 중요!)
+        // 1순위: 'en-GB' 같은 디테일한 코드가 사전에 있는지 확인
+        // 2순위: 못 찾으면 'ko' 같은 앞 2자리 언어 코드로 확인
+        // 3순위: 다 없으면 전 세계 기준 통화인 'USD(달러)'로 고정
+        const targetCurrency = currencyMap[userLocale] || currencyMap[langPrefix] || 'USD';
 
         const cameraInput = document.getElementById('cameraInput');
         const preview = document.getElementById('preview');
@@ -107,24 +153,24 @@
         async function analyzeMenuWithAI(base64Data) {
             const url = '/api/analyze'; // ※ 본인의 서버 혹은 백엔드 주소로 유지
         
-            // AI 프롬프트: 화폐 단위를 'CNY', 'JPY' 같은 3자리 코드로 뽑도록 유도
+
+// 🔥 최종 업그레이드된 AI 프롬프트 (예외 방어 + 고밀도 음식 설명)
             const promptText = `
                 You are a global food expert helper. Analyze this menu image. 
                 Output locale: "${userLanguage}".
                 Do NOT output my instructions or placeholders. Only output the actual extracted data.
 
                 ---CARD_START---
-                **OriginalName:** Extract ONLY the main local name (e.g., 天然海蜇 or 설렁탕).
-                **Subtitles:** Extract other foreign names/descriptions. If none, write "None".
+                **OriginalName:** Extract ONLY the main local name.
+                **Subtitles:** Extract other foreign names, descriptions, or calories (e.g., 2370 cal). If none, write "None".
                 **TranslatedName:** Translation of the main name in "${userLanguage}".
-                **CurrencyCode:** 3-letter currency code (e.g., CNY, JPY, USD, KRW). If none or unknown, write "Unknown".
-                **Price:** Extract only the number. If none, write "None".
-                **Description:** Clean, appetizing description in "${userLanguage}". Max 2 sentences.
+                **CurrencyCode:** 3-letter currency code (e.g., USD, KRW, CNY). If no symbol is present, GUESS the most likely currency based on the language/context of the menu. If completely unknown, write "Unknown".
+                **Price:** Extract the price. If there are multiple options/prices (e.g., "8 oz. Single 54 | Petite Twin Tails 52"), extract ALL of them exactly as written. If no price, write "None".
+                **Description:** Explain the core ingredients, cooking method, and taste profile (e.g., texture, flavor) in an appetizing way. Must be concise. Max 2 sentences in "${userLanguage}".
                 **Warning:** Allergies and religious restrictions. If none, write "None".
                 **Tags:** Relevant emojis (e.g., 🌶️, 🥩).
                 ---CARD_END---
             `;
-
             const requestBody = {
                 contents: [{
                     parts: [
@@ -178,35 +224,52 @@
                 const warning = cleanedText.match(/\*\*Warning:\*\*\s*(.*)/)?.[1] || 'None';
                 const tags = cleanedText.match(/\*\*Tags:\*\*\s*(.*)/)?.[1] || '';
 
-                // --- 💰 가격 + 실시간 환율 로직 ---
+
+// --- 💰 글로벌 가격 + 실시간 환율 로직 ---
                 let priceDisplay = `<div class="price" style="color:#999; font-size:0.9rem;">가격 정보 없음</div>`;
-                const localPrice = parseFloat(priceRaw.replace(/[^0-9.]/g, '')); 
                 
-                if (priceRaw !== 'None' && !isNaN(localPrice)) {
+                if (priceRaw !== 'None') {
+                    const hasText = /[a-zA-Z가-힣\|]/.test(priceRaw);
+                    const localPrice = parseFloat(priceRaw.replace(/[^0-9.]/g, '')); 
+
+                    // 사용자 국가의 통화 표기법을 자동으로 맞춰주는 포맷터 (예: $15.00, ¥1,500)
+                    const currencyFormatter = new Intl.NumberFormat(userLanguage, {
+                        style: 'currency',
+                        currency: targetCurrency,
+                        maximumFractionDigits: targetCurrency === 'KRW' || targetCurrency === 'JPY' ? 0 : 2
+                    });
+
                     if (currencyCode !== 'Unknown' && currencyCode !== targetCurrency) {
                         try {
-                            // 무료 환율 API를 사용해 원본 화폐(예: CNY)를 기준 환율로 가져옴
                             const res = await fetch(`https://api.exchangerate-api.com/v4/latest/${currencyCode}`);
                             const exData = await res.json();
-                            const rateToKRW = exData.rates[targetCurrency];
+                            const rateToTarget = exData.rates[targetCurrency];
                             
-                            if (rateToKRW) {
-                                const converted = Math.round(localPrice * rateToKRW);
-                                priceDisplay = `<div class="price">${localPrice} ${currencyCode} <span class="exchange">(≈ ${converted.toLocaleString()}원)</span></div>`;
-                            } else {
-                                priceDisplay = `<div class="price">${localPrice} ${currencyCode}</div>`;
+                            // 1. 단일 가격일 경우 (환율 변환해서 표시)
+                            if (rateToTarget && !hasText && !isNaN(localPrice)) {
+                                const converted = localPrice * rateToTarget;
+                                const formattedConverted = currencyFormatter.format(converted);
+                                
+                                priceDisplay = `<div class="price">${localPrice} ${currencyCode} <span class="exchange">(≈ ${formattedConverted})</span></div>`;
+                            } 
+                            // 2. 옵션/글자가 섞여 있는 경우 (환율 변환 불가, 원문 표시)
+                            else {
+                                priceDisplay = `<div class="price" style="font-size:1rem;">${priceRaw} ${currencyCode}</div>`;
                             }
                         } catch (e) {
                             console.error("환율 변환 실패", e);
-                            priceDisplay = `<div class="price">${localPrice} ${currencyCode}</div>`;
+                            priceDisplay = `<div class="price" style="font-size:1rem;">${priceRaw} ${currencyCode}</div>`;
                         }
-                    } else if (currencyCode === targetCurrency) {
-                        priceDisplay = `<div class="price">${localPrice.toLocaleString()}원</div>`;
-                    } else {
-                        priceDisplay = `<div class="price">${localPrice}</div>`;
+                    } 
+                    // 3. 이미 메뉴판과 사용자 화폐가 같은 경우 (예: 미국인이 미국 식당에서)
+                    else if (currencyCode === targetCurrency && !hasText && !isNaN(localPrice)) {
+                        priceDisplay = `<div class="price">${currencyFormatter.format(localPrice)}</div>`;
+                    } 
+                    // 4. 그 외 처리 불가 상황
+                    else {
+                        priceDisplay = `<div class="price" style="font-size:1rem;">${priceRaw}</div>`;
                     }
                 }
-
                 // --- ⚠️ 주의사항 로직 ---
                 let warningDisplay = '';
                 if (warning !== 'None') {
