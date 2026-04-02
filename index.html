@@ -296,8 +296,13 @@ async function analyzeMenuWithAI(base64Data, file) {
             languageSaved: langPrefix, // 언어별로 따로 저장
             originalCurrency: detectedCurrency, // 인식된 화폐 저장
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        });
-    }
+}).then(() => {
+                    console.log(`[Firestore 저장 완료] ${titleOriginal}`);
+                }).catch((error) => {
+                    console.error("데이터 저장 실패:", error);
+                });
+            }); // ⚠️ 잃어버렸던 forEach 닫기 괄호가 여기 있습니다!
+        }
 
     function renderFromCache(data) {
         loading.style.display = 'none';
