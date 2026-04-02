@@ -69,9 +69,9 @@
 
     <script>
         // 기본 사용자 언어 및 목표 화폐 (한국인 기준)
-// 🌍 1. 브라우저 언어/국가 감지 (예: 'ko-KR', 'en-US', 'en-GB')
-        const userLocale = navigator.language || 'en-US';
-        const langPrefix = userLocale.split('-')[0]; // 'en', 'ko' 등 앞 2자리만 추출
+// 🌍 1. 브라우저 언어/국가 감지
+        const userLanguage = navigator.language || 'en-US';
+        const langPrefix = userLanguage.split('-')[0]; // 'en', 'ko' 등 앞 2자리만 추출
 
         // 🌍 2. 글로벌 화폐 매핑 사전 (전 세계 주요 여행객 99% 커버)
         const currencyMap = {
@@ -112,11 +112,9 @@
             'ar-SA': 'SAR',              // 사우디아라비아
         };
 
-        // 🌍 3. 목표 화폐 결정 로직 (매우 중요!)
-        // 1순위: 'en-GB' 같은 디테일한 코드가 사전에 있는지 확인
-        // 2순위: 못 찾으면 'ko' 같은 앞 2자리 언어 코드로 확인
-        // 3순위: 다 없으면 전 세계 기준 통화인 'USD(달러)'로 고정
-        const targetCurrency = currencyMap[userLocale] || currencyMap[langPrefix] || 'USD';
+        // 🌍 3. 목표 화폐 결정 로직
+        const targetCurrency = currencyMap[userLanguage] || currencyMap[langPrefix] || 'USD';
+
 
         const cameraInput = document.getElementById('cameraInput');
         const preview = document.getElementById('preview');
