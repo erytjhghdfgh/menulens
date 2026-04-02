@@ -53,6 +53,7 @@
     <!-- 🔥 Firebase SDK 도구 불러오기 -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://unpkg.com/tesseract.js@v2.1.0/dist/tesseract.min.js"></script>
 </head>
 <body>
 
@@ -144,10 +145,30 @@
             };
         });
 
-        async function analyzeMenuWithAI(base64Data) {
-            const url = '/api/analyze'; // Cloudflare 백엔드 주소
+   
+async function analyzeMenuWithAI(base64Data, file) {
+        // --- [하이브리드 1단계] 무료 OCR로 글자 먼저 읽기 ---
+        const ocrResult = await Tesseract.recognize(file, 'kor+eng');
+        const detectedText = ocrResult.data.text.trim().split('\n')[0]; // 첫 줄 글자 추출 (예: "설렁탕")
 
-            // 🔥 더욱 정교해진 AI 프롬프트 (가격 추출 + 주의사항 포함)
+        // --- [하이브리드 2단계] 파이어베이스 창고 뒤지기 ---
+        const cache = await db.collection("menu_database")
+            .where("originalName", "==", detectedText)
+            .where("languageSaved", "==", langPrefix)
+            .get();
+
+        if (!cache.empty) {
+            // 🎉 창고에 데이터가 있는 경우 (비용 0원!)
+            console.log("⚡ 파이어베이스 창고에서 무료로 가져옴!");
+            const cachedData = cache.docs[0].data();
+            renderFromCache(cachedData); 
+            return; 
+        }
+
+        // --- [하이브리드 3단계] 창고에 없으면 제미나이 호출 ---
+        const url = '/api/analyze';
+    
+// 🔥 업그레이드된 AI 프롬프트 (화폐 단위 추출 기능 추가)
             const promptText = `
                 You are a friendly global food expert helper for tourists. 
                 Analyze this restaurant menu image and output the result *ONLY* in the user's preferred locale "${userLanguage}". 
@@ -157,6 +178,7 @@
                 ---CARD_START---
                 ### [Original Menu Name from Image]
                 #### (Translation in "${userLanguage}")
+                **Currency:** Detect the original currency symbol or code from the menu (e.g., KRW, CNY, USD, JPY, ¥, $, 원). If none is found, write "None".
                 **Price:** Extract only the number (e.g., 15000). If no price is found, write "None".
                 **Description:** Clean, appetizing description in "${userLanguage}". Max 2 sentences.
                 **Warning:** If the food contains Beef, Pork, Seafood, Peanuts, or Dairy, state it clearly (e.g., "Contains Beef (Not suitable for Hindus)"). If none, write "None".
@@ -253,23 +275,35 @@
                 `;
                 resultContainer.appendChild(cardDiv);
 
-                // --- 💾 Firestore에 데이터 조용히 보관하기 (캐싱용) ---
-                db.collection("menu_database").add({
-                    originalName: titleOriginal,
-                    translatedName: titleTranslated,
-                    description: desc,
-                    warning: warning,
-                    tags: tags,
-                    priceRaw: numberOnlyPrice || null,
-                    languageSaved: langPrefix,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                }).then(() => {
-                    console.log(`[Firestore 저장 완료] ${titleOriginal}`);
-                }).catch((error) => {
-                    console.error("데이터 저장 실패:", error);
-                });
-            });
-        }
+// 저장 시 priceRaw 삭제
+        db.collection("menu_database").add({
+            originalName: titleOriginal,
+            translatedName: titleTranslated,
+            description: desc,
+            warning: warning,
+            languageSaved: langPrefix, // 언어별로 따로 저장
+            originalCurrency: detectedCurrency, // 인식된 화폐 저장
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+    }
+
+    function renderFromCache(data) {
+        loading.style.display = 'none';
+        resultContainer.style.display = 'flex';
+        // 캐시된 데이터로 화면을 그리는 로직...
+        const cardDiv = document.createElement('div');
+        cardDiv.className = 'menu-card';
+        cardDiv.innerHTML = `
+            <div class="title-ko">${data.originalName}</div>
+            <div class="title-translated">${data.translatedName}</div>
+            <div class="desc">${data.description}</div>
+            <div class="card-footer">
+                <div class="tags">${data.tags}</div>
+                <div style="color: #2196F3; font-weight: bold;">✅ Verified Info</div>
+            </div>
+        `;
+        resultContainer.appendChild(cardDiv);
+    }
     </script>
 </body>
 </html>
