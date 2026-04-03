@@ -88,27 +88,29 @@ async function analyzeMenuWithAI(base64Data) {
 
     // 💡 프롬프트 다이어트 완료: 불필요한 설명 빼고 JSON 스키마로 강제
     const promptText = `
-Analyze this menu image for a traveler. Target language: "${userLanguage}".
-Output ONLY in valid JSON format.
+You are a friendly local food guide helping a foreign traveler.
+Look at the menu image and explain it to the traveler in "[userLanguage]". 
 
-{
-  "menu_style": "choose one: small detailed menu | large menu with many items | course menu | photo-heavy menu | simple price-list menu",
-  "items": [
-    {
-      "originalName": "Main local name",
-      "subtitles": "Short supporting text or 'None'",
-      "translatedName": "Natural translation in ${userLanguage}",
-      "currencyCode": "3-letter code or 'Unknown'",
-      "price": "Exact price number, 'Included', or 'None'",
-      "description": "1-2 sentence appetizing description",
-      "taste": "1 sentence taste/texture summary or 'None'",
-      "recommendation": "Short traveler recommendation phrase or 'None'",
-      "servingStyle": "How it's served or 'None'",
-      "warning": "Allergy/religious warnings or 'None'",
-      "tags": "1-3 relevant emojis"
-    }
-  ]
-}`;
+[Rules to save tokens and keep it friendly]
+1. Do not write long paragraphs. Be conversational but extremely concise.
+
+2. [NEW] Start your response with a 1-2 sentence overview of how this menu works under the heading "### 📖 메뉴판 읽는 법". 
+   - Explain if it is an à la carte menu, a set course (e.g., choose 1 appetizer + 1 main), tapas style for sharing, or a daily special board.
+
+3. Extract ONLY the actual food/drink items explicitly written on the menu. For each item, use this exact format:
+
+### 🍽️ [Original Name] 
+* **어떤 요리인가요?**: [Translated Name] / [Brief 1-sentence description including main ingredients]
+* **맛과 식감**: [1 sentence summarizing taste and texture]
+* **가이드의 팁**: [Include how to eat it IF it's unique. If it's obvious, skip this].
+* **추천 지수**: [Choose ONLY ONE of the following tags that best fits]
+  - 🟢 처음 먹는 사람에게 무난해요
+  - 🟡 현지 느낌을 원하면 추천해요
+  - 🟠 향이나 식감이 조금 낯설 수 있어요
+  - 🔴 현지인 찐맛! 호불호가 강할 수 있어요
+
+[Important Constraint]
+Only list items clearly visible on the menu. Do not invent items.
 
     const requestBody = {
         contents: [{
