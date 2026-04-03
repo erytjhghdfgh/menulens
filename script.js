@@ -47,8 +47,8 @@ cameraInput.addEventListener('change', function(event) {
 
     preview.src = URL.createObjectURL(file);
     preview.style.display = 'block';
-    
-    resultContainer.innerHTML = ''; 
+
+    resultContainer.innerHTML = '';
     resultContainer.style.display = 'none';
     disclaimer.style.display = 'none';
     loading.style.display = 'block';
@@ -56,15 +56,15 @@ cameraInput.addEventListener('change', function(event) {
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = function() {
-        const base64Image = reader.result.split(',')[1]; 
+        const base64Image = reader.result.split(',')[1];
         analyzeMenuWithAI(base64Image);
     };
 });
 
 async function analyzeMenuWithAI(base64Data) {
-    const url = '/api/analyze'; 
+    const url = '/api/analyze';
 
-const promptText = `
+    const promptText = `
 You are a travel-friendly menu concierge for international travelers.
 Analyze this restaurant menu image for a traveler who may not know the local food culture.
 
@@ -80,8 +80,20 @@ First, determine the menu style:
 Then adapt the output style:
 - For small menus: detailed traveler-friendly cards
 - For large menus: short list format
-- For photo-heavy menus: group items into categories
-- For simple price-list menus: show short explanation only
+- For photo-heavy menus: short list format
+- For course menus: detailed traveler-friendly cards
+- For simple price-list menus: short list format
+
+Before listing menu items, output menu metadata in this exact format:
+
+---MENU_META_START---
+**MenuStyle:** one of the following only
+- small detailed menu
+- large menu with many items
+- course menu
+- photo-heavy menu
+- simple price-list menu
+---MENU_META_END---
 
 Important rules:
 - Only use information that is clearly visible in the image.
@@ -100,19 +112,23 @@ For each actual selectable menu item, output exactly in this format:
 **CurrencyCode:** 3-letter currency code (e.g. USD, KRW, CNY, EUR). If no symbol is present, guess the most likely currency from the menu context. If still unknown, write "Unknown".
 **Price:** Extract the price for that item exactly as written. If the item has no separate price because it belongs to a course menu, write "Included in course". If no price is visible, write "None".
 **Description:** Briefly explain what the dish is in "${userLanguage}". 1 to 2 sentences only.
-**Taste:** Summarize the likely taste and texture in one short sentence in "${userLanguage}". If unclear, write "None".
+**Taste:** Summarize the likely taste and texture in one short sentence in "${userLanguage}". If unclear or unnecessary, write "None".
 **Recommendation:** Classify for a traveler in one short phrase in "${userLanguage}". Examples: "무난한 편", "현지 느낌 강함", "도전적인 메뉴", "처음 먹는 사람은 호불호 가능".
-**ServingStyle:** Explain briefly how it is usually served or eaten in "${userLanguage}". If unclear, write "None".
+**ServingStyle:** Explain briefly how it is usually served or eaten in "${userLanguage}". If unclear or unnecessary, write "None".
 **Warning:** Mention important allergy risks, religious concerns, alcohol-based sauce possibility, unusual ingredients, or strong preference issues. If none, write "None".
 **Tags:** Relevant emojis that match the dish and its vibe.
 ---CARD_END---
 
 Extra guidance:
 - Good description example: what it is + how it tastes + whether it is beginner-friendly.
-- For unusual local dishes like frog legs, snails, organ meat, or very strong cheese, mention that they may feel adventurous for some travelers.
+- For unusual local dishes like frog legs, snails, organ meat, very strong cheese, jellyfish, or fermented dishes, mention that they may feel adventurous for some travelers.
 - For familiar dishes, say they are relatively approachable.
+- Do not repeat the same kind of explanation too mechanically across every item.
+- For large menus, keep each item shorter and simpler.
+- Only mention Taste or ServingStyle if it adds real value.
 - Do not include restaurant history, ratings, or outside knowledge unless it is clearly shown in the image.
 `;
+
     const requestBody = {
         contents: [{
             parts: [
@@ -132,7 +148,7 @@ Extra guidance:
         const rawText = await response.text();
         const data = JSON.parse(rawText);
         const aiResultText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-        
+
         if (!aiResultText) throw new Error('AI 응답을 읽을 수 없습니다.');
 
         parseAndRender(aiResultText);
@@ -144,197 +160,327 @@ Extra guidance:
     }
 }
 
+function extractField(text, fieldName, fallback = 'None') {
+    const match = text.match(new RegExp(`\\*\\*${fieldName}:\\*\\*\\s*(.*)`));
+    return match?.[1]?.trim() || fallback;
+}
+
+function cleanSubtitleText(subtitles) {
+    if (!subtitles || subtitles === 'None') return 'None';
+
+    let cleaned = subtitles.replace(/\s+/g, ' ').trim();
+
+    if (cleaned.length > 70) {
+        cleaned = cleaned.slice(0, 70) + '...';
+    }
+
+    const weirdMixCount = (cleaned.match(/[()]/g) || []).length;
+    if (weirdMixCount >= 4 || cleaned.length > 90) {
+        return 'None';
+    }
+
+    return cleaned;
+}
+
+function shouldShowBlock(text) {
+    if (!text) return false;
+    const value = text.trim();
+    return value !== '' && value !== 'None';
+}
+
+async function buildPriceDisplay(priceRaw, currencyCode) {
+    let priceDisplay = `<div class="price" style="color:#999; font-size:0.9rem;">가격 정보 없음</div>`;
+
+    if (priceRaw === 'None') return priceDisplay;
+
+    const hasText = /[a-zA-Z가-힣\|]/.test(priceRaw);
+    const localPrice = parseFloat(priceRaw.replace(/[^0-9.]/g, ''));
+
+    const currencyFormatter = new Intl.NumberFormat(userLanguage, {
+        style: 'currency',
+        currency: targetCurrency,
+        maximumFractionDigits: targetCurrency === 'KRW' || targetCurrency === 'JPY' ? 0 : 2
+    });
+
+    if (currencyCode !== 'Unknown' && currencyCode !== targetCurrency) {
+        try {
+            const res = await fetch(`https://api.exchangerate-api.com/v4/latest/${currencyCode}`);
+            const exData = await res.json();
+            const rateToTarget = exData.rates[targetCurrency];
+
+            if (rateToTarget && !hasText && !isNaN(localPrice)) {
+                const converted = localPrice * rateToTarget;
+                const formattedConverted = currencyFormatter.format(converted);
+
+                priceDisplay = `<div class="price">${localPrice} ${currencyCode} <span class="exchange">(≈ ${formattedConverted})</span></div>`;
+            } else {
+                priceDisplay = `<div class="price" style="font-size:1rem;">${priceRaw} ${currencyCode}</div>`;
+            }
+        } catch (e) {
+            console.error("환율 변환 실패", e);
+            priceDisplay = `<div class="price" style="font-size:1rem;">${priceRaw} ${currencyCode}</div>`;
+        }
+    } else if (currencyCode === targetCurrency && !hasText && !isNaN(localPrice)) {
+        priceDisplay = `<div class="price">${currencyFormatter.format(localPrice)}</div>`;
+    } else {
+        priceDisplay = `<div class="price" style="font-size:1rem;">${priceRaw}</div>`;
+    }
+
+    return priceDisplay;
+}
+
+function getMenuStyle(rawText) {
+    const menuMetaMatch = rawText.match(/---MENU_META_START---([\s\S]*?)---MENU_META_END---/);
+    if (!menuMetaMatch) return 'small detailed menu';
+
+    const metaText = menuMetaMatch[1];
+    return extractField(metaText, 'MenuStyle', 'small detailed menu');
+}
+
+function isCompactMenuStyle(menuStyle) {
+    return (
+        menuStyle === 'large menu with many items' ||
+        menuStyle === 'photo-heavy menu' ||
+        menuStyle === 'simple price-list menu'
+    );
+}
+
+function buildCompactDescription(desc, taste, servingStyle) {
+    const pieces = [];
+
+    if (shouldShowBlock(desc)) pieces.push(desc);
+    if (shouldShowBlock(taste)) pieces.push(taste);
+    if (shouldShowBlock(servingStyle)) pieces.push(servingStyle);
+
+    if (pieces.length === 0) return '';
+
+    return pieces[0];
+}
+
+function buildDetailedInfoBlocks(desc, taste, servingStyle) {
+    let infoBlocks = '';
+
+    if (shouldShowBlock(desc)) {
+        infoBlocks += `
+            <div style="background:#f8f9fa; border-radius:10px; padding:12px 14px; margin-top:10px;">
+                <div style="font-size:0.78rem; font-weight:800; color:#666; margin-bottom:6px;">이 음식은?</div>
+                <div style="font-size:0.92rem; color:#444; line-height:1.6;">${desc}</div>
+            </div>
+        `;
+    }
+
+    if (shouldShowBlock(taste)) {
+        infoBlocks += `
+            <div style="background:#f8f9fa; border-radius:10px; padding:12px 14px; margin-top:10px;">
+                <div style="font-size:0.78rem; font-weight:800; color:#666; margin-bottom:6px;">맛 / 식감</div>
+                <div style="font-size:0.92rem; color:#444; line-height:1.6;">${taste}</div>
+            </div>
+        `;
+    }
+
+    if (shouldShowBlock(servingStyle)) {
+        infoBlocks += `
+            <div style="background:#f8f9fa; border-radius:10px; padding:12px 14px; margin-top:10px;">
+                <div style="font-size:0.78rem; font-weight:800; color:#666; margin-bottom:6px;">여행자 팁</div>
+                <div style="font-size:0.92rem; color:#444; line-height:1.6;">${servingStyle}</div>
+            </div>
+        `;
+    }
+
+    return infoBlocks;
+}
+
 async function parseAndRender(rawText) {
     loading.style.display = 'none';
     disclaimer.style.display = 'block';
     resultContainer.style.display = 'flex';
     resultContainer.innerHTML = '';
 
+    const menuStyle = getMenuStyle(rawText);
+    const compactMode = isCompactMenuStyle(menuStyle);
+
     const cardTexts = rawText.split('---CARD_START---').filter(text => text.trim() !== '');
 
     for (const cardText of cardTexts) {
         const cleanedText = cardText.split('---CARD_END---')[0].trim();
 
-        const titleOriginal = cleanedText.match(/\*\*OriginalName:\*\*\s*(.*)/)?.[1] || 'Unknown';
-        const subtitles = cleanedText.match(/\*\*Subtitles:\*\*\s*(.*)/)?.[1] || 'None';
-        const titleTranslated = cleanedText.match(/\*\*TranslatedName:\*\*\s*(.*)/)?.[1] || '';
-        const currencyCode = cleanedText.match(/\*\*CurrencyCode:\*\*\s*(.*)/)?.[1] || 'Unknown';
-        const priceRaw = cleanedText.match(/\*\*Price:\*\*\s*(.*)/)?.[1] || 'None';
-        const desc = cleanedText.match(/\*\*Description:\*\*\s*(.*)/)?.[1] || '';
-        const taste = cleanedText.match(/\*\*Taste:\*\*\s*(.*)/)?.[1] || 'None';
-        const recommendation = cleanedText.match(/\*\*Recommendation:\*\*\s*(.*)/)?.[1] || 'None';
-        const servingStyle = cleanedText.match(/\*\*ServingStyle:\*\*\s*(.*)/)?.[1] || 'None';
-        const warning = cleanedText.match(/\*\*Warning:\*\*\s*(.*)/)?.[1] || 'None';
-        const tags = cleanedText.match(/\*\*Tags:\*\*\s*(.*)/)?.[1] || '';
+        const titleOriginal = extractField(cleanedText, 'OriginalName', 'Unknown');
+        const subtitles = extractField(cleanedText, 'Subtitles', 'None');
+        const titleTranslated = extractField(cleanedText, 'TranslatedName', '');
+        const currencyCode = extractField(cleanedText, 'CurrencyCode', 'Unknown');
+        const priceRaw = extractField(cleanedText, 'Price', 'None');
+        const desc = extractField(cleanedText, 'Description', 'None');
+        const taste = extractField(cleanedText, 'Taste', 'None');
+        const recommendation = extractField(cleanedText, 'Recommendation', 'None');
+        const servingStyle = extractField(cleanedText, 'ServingStyle', 'None');
+        const warning = extractField(cleanedText, 'Warning', 'None');
+        const tags = extractField(cleanedText, 'Tags', '');
 
-        let priceDisplay = `<div class="price" style="color:#999; font-size:0.9rem;">가격 정보 없음</div>`;
+        const cleanedSubtitle = cleanSubtitleText(subtitles);
+        const priceDisplay = await buildPriceDisplay(priceRaw, currencyCode);
 
-        if (priceRaw !== 'None') {
-            const hasText = /[a-zA-Z가-힣\|]/.test(priceRaw);
-            const localPrice = parseFloat(priceRaw.replace(/[^0-9.]/g, ''));
+        const subtitlesDisplay = cleanedSubtitle !== 'None'
+            ? `<div style="font-size:0.82rem; color:#888; margin-bottom:8px; line-height:1.4;">${cleanedSubtitle}</div>`
+            : '';
 
-            const currencyFormatter = new Intl.NumberFormat(userLanguage, {
-                style: 'currency',
-                currency: targetCurrency,
-                maximumFractionDigits: targetCurrency === 'KRW' || targetCurrency === 'JPY' ? 0 : 2
-            });
+        const recommendationBadge = recommendation !== 'None'
+            ? `<div style="display:inline-block; background-color:#fff3e0; color:#e65100; font-size:0.82rem; font-weight:700; padding:6px 10px; border-radius:999px; margin-bottom:12px;">${recommendation}</div>`
+            : '';
 
-            if (currencyCode !== 'Unknown' && currencyCode !== targetCurrency) {
-                try {
-                    const res = await fetch(`https://api.exchangerate-api.com/v4/latest/${currencyCode}`);
-                    const exData = await res.json();
-                    const rateToTarget = exData.rates[targetCurrency];
+        const warningDisplay = warning !== 'None'
+            ? `<div class="warning">⚠️ 주의: ${warning}</div>`
+            : '';
 
-                    if (rateToTarget && !hasText && !isNaN(localPrice)) {
-                        const converted = localPrice * rateToTarget;
-                        const formattedConverted = currencyFormatter.format(converted);
-
-                        priceDisplay = `<div class="price">${localPrice} ${currencyCode} <span class="exchange">(≈ ${formattedConverted})</span></div>`;
-                    } else {
-                        priceDisplay = `<div class="price" style="font-size:1rem;">${priceRaw} ${currencyCode}</div>`;
-                    }
-                } catch (e) {
-                    console.error("환율 변환 실패", e);
-                    priceDisplay = `<div class="price" style="font-size:1rem;">${priceRaw} ${currencyCode}</div>`;
-                }
-            } else if (currencyCode === targetCurrency && !hasText && !isNaN(localPrice)) {
-                priceDisplay = `<div class="price">${currencyFormatter.format(localPrice)}</div>`;
-            } else {
-                priceDisplay = `<div class="price" style="font-size:1rem;">${priceRaw}</div>`;
-            }
-        }
-
-        let warningDisplay = '';
-        if (warning !== 'None') {
-            warningDisplay = `<div class="warning">⚠️ 주의: ${warning}</div>`;
-        }
-
-        // 1) subtitles 정리: 너무 길면 잘라서 보여주고, 너무 복잡하면 숨김
-        let cleanedSubtitle = subtitles;
-        if (cleanedSubtitle !== 'None') {
-            cleanedSubtitle = cleanedSubtitle.replace(/\s+/g, ' ').trim();
-
-            if (cleanedSubtitle.length > 70) {
-                cleanedSubtitle = cleanedSubtitle.slice(0, 70) + '...';
-            }
-
-            const weirdMixCount = (cleanedSubtitle.match(/[()]/g) || []).length;
-            if (weirdMixCount >= 4 || cleanedSubtitle.length > 90) {
-                cleanedSubtitle = 'None';
-            }
-        }
-
-        let subtitlesDisplay = '';
-        if (cleanedSubtitle !== 'None') {
-            subtitlesDisplay = `<div class="menu-subtitle">${cleanedSubtitle}</div>`;
-        }
-
-        // 2) 추천 판단 배지
-        let recommendationBadge = '';
-        if (recommendation !== 'None') {
-            recommendationBadge = `<div class="recommend-badge">${recommendation}</div>`;
-        }
-
-        // 3) 설명 블록 분리
-        let infoBlocks = '';
-
-        if (desc && desc !== 'None') {
-            infoBlocks += `
-                <div class="info-block">
-                    <div class="info-label">이 음식은?</div>
-                    <div class="info-text">${desc}</div>
-                </div>
-            `;
-        }
-
-        if (taste !== 'None') {
-            infoBlocks += `
-                <div class="info-block">
-                    <div class="info-label">맛 / 식감</div>
-                    <div class="info-text">${taste}</div>
-                </div>
-            `;
-        }
-
-        if (servingStyle !== 'None') {
-            infoBlocks += `
-                <div class="info-block">
-                    <div class="info-label">여행자 팁</div>
-                    <div class="info-text">${servingStyle}</div>
-                </div>
-            `;
-        }
-
+        const compactDescription = buildCompactDescription(desc, taste, servingStyle);
         const searchUrl = `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(titleOriginal + ' dish')}`;
 
         const cardDiv = document.createElement('div');
         cardDiv.className = 'menu-card';
-        cardDiv.innerHTML = `
-            <div class="title-ko">${titleOriginal}</div>
-            ${subtitlesDisplay}
-            ${titleTranslated ? `<div class="title-translated">${titleTranslated}</div>` : ''}
-            ${priceDisplay}
-            ${recommendationBadge}
-            ${warningDisplay}
-            <div class="info-blocks-wrap">
+
+        if (compactMode) {
+            cardDiv.innerHTML = `
+                <div class="title-ko">${titleOriginal}</div>
+                ${subtitlesDisplay}
+                ${titleTranslated ? `<div class="title-translated">${titleTranslated}</div>` : ''}
+                ${priceDisplay}
+                ${recommendationBadge}
+                ${warningDisplay}
+                ${compactDescription ? `<div class="desc" style="margin-top:6px;">${compactDescription}</div>` : ''}
+                <div class="card-footer">
+                    ${tags ? `<div class="tags">${tags}</div>` : '<div></div>'}
+                    <a href="${searchUrl}" target="_blank" class="search-image-btn">🔍 사진 보기</a>
+                </div>
+            `;
+        } else {
+            const infoBlocks = buildDetailedInfoBlocks(desc, taste, servingStyle);
+
+            cardDiv.innerHTML = `
+                <div class="title-ko">${titleOriginal}</div>
+                ${subtitlesDisplay}
+                ${titleTranslated ? `<div class="title-translated">${titleTranslated}</div>` : ''}
+                ${priceDisplay}
+                ${recommendationBadge}
+                ${warningDisplay}
                 ${infoBlocks}
-            </div>
-            <div class="card-footer">
-                ${tags ? `<div class="tags">${tags}</div>` : '<div></div>'}
-                <a href="${searchUrl}" target="_blank" class="search-image-btn">🔍 사진 보기</a>
-            </div>
-        `;
+                <div class="card-footer">
+                    ${tags ? `<div class="tags">${tags}</div>` : '<div></div>'}
+                    <a href="${searchUrl}" target="_blank" class="search-image-btn">🔍 사진 보기</a>
+                </div>
+            `;
+        }
+
         resultContainer.appendChild(cardDiv);
     }
 }
+
 // ==========================================
 // 🌍 4. 다국어 UI (글로벌 Top 15 언어 지원)
 // ==========================================
 const uiTranslations = {
-    'ko': { // 1. 한국어
-        title: "MenuLens 🔍", slogan: "메뉴판을 카메라로 찍으면 정보를 알려드립니다.", btn: "메뉴 사진 찍기", loading: "AI가 메뉴를 분석하고 있어요... ⏳", disclaimer: "💡 설명은 참고용이며, 실제 식당 요리와 다를 수 있습니다."
+    'ko': {
+        title: "MenuLens 🔍",
+        slogan: "메뉴판을 카메라로 찍으면 정보를 알려드립니다.",
+        btn: "메뉴 사진 찍기",
+        loading: "AI가 메뉴를 분석하고 있어요... ⏳",
+        disclaimer: "💡 설명은 참고용이며, 실제 식당 요리와 다를 수 있습니다."
     },
-    'en': { // 2. 영어 (기본값)
-        title: "MenuLens 🔍", slogan: "Take a photo of the menu to get details.", btn: "Take a Photo", loading: "AI is analyzing the menu... ⏳", disclaimer: "💡 Descriptions are for reference only and may vary."
+    'en': {
+        title: "MenuLens 🔍",
+        slogan: "Take a photo of the menu to get details.",
+        btn: "Take a Photo",
+        loading: "AI is analyzing the menu... ⏳",
+        disclaimer: "💡 Descriptions are for reference only and may vary."
     },
-    'ja': { // 3. 일본어
-        title: "MenuLens 🔍", slogan: "メニューの写真を撮ると情報が表示されます。", btn: "写真を撮る", loading: "AIがメニューを分析しています... ⏳", disclaimer: "💡 説明は参考用であり、実際の料理と異なる場合があります。"
+    'ja': {
+        title: "MenuLens 🔍",
+        slogan: "メニューの写真を撮ると情報が表示されます。",
+        btn: "写真を撮る",
+        loading: "AIがメニューを分析しています... ⏳",
+        disclaimer: "💡 説明は参考用であり、実際の料理と異なる場合があります。"
     },
-    'zh': { // 4. 중국어
-        title: "MenuLens 🔍", slogan: "拍下菜单照片即可获取详细信息。", btn: "拍下菜单", loading: "AI 正在分析菜单... ⏳", disclaimer: "💡 说明仅供参考，可能与实际菜品有所不同。"
+    'zh': {
+        title: "MenuLens 🔍",
+        slogan: "拍下菜单照片即可获取详细信息。",
+        btn: "拍下菜单",
+        loading: "AI 正在分析菜单... ⏳",
+        disclaimer: "💡 说明仅供参考，可能与实际菜品有所不同。"
     },
-    'es': { // 5. 스페인어
-        title: "MenuLens 🔍", slogan: "Toma una foto del menú para ver los detalles.", btn: "Tomar una foto", loading: "La IA está analizando el menú... ⏳", disclaimer: "💡 Las descripciones son solo de referencia."
+    'es': {
+        title: "MenuLens 🔍",
+        slogan: "Toma una foto del menú para ver los detalles.",
+        btn: "Tomar una foto",
+        loading: "La IA está analizando el menú... ⏳",
+        disclaimer: "💡 Las descripciones son solo de referencia."
     },
-    'fr': { // 6. 프랑스어
-        title: "MenuLens 🔍", slogan: "Prenez une photo du menu pour obtenir des détails.", btn: "Prendre une photo", loading: "L'IA analyse le menu... ⏳", disclaimer: "💡 Les descriptions sont fournies à titre indicatif."
+    'fr': {
+        title: "MenuLens 🔍",
+        slogan: "Prenez une photo du menu pour obtenir des détails.",
+        btn: "Prendre une photo",
+        loading: "L'IA analyse le menu... ⏳",
+        disclaimer: "💡 Les descriptions sont fournies à titre indicatif."
     },
-    'de': { // 7. 독일어
-        title: "MenuLens 🔍", slogan: "Machen Sie ein Foto der Speisekarte für Details.", btn: "Foto machen", loading: "KI analysiert das Menü... ⏳", disclaimer: "💡 Beschreibungen dienen nur als Referenz."
+    'de': {
+        title: "MenuLens 🔍",
+        slogan: "Machen Sie ein Foto der Speisekarte für Details.",
+        btn: "Foto machen",
+        loading: "KI analysiert das Menü... ⏳",
+        disclaimer: "💡 Beschreibungen dienen nur als Referenz."
     },
-    'th': { // 8. 태국어
-        title: "MenuLens 🔍", slogan: "ถ่ายรูปเมนูเพื่อดูรายละเอียด", btn: "ถ่ายรูปเมนู", loading: "AI กำลังวิเคราะห์เมนู... ⏳", disclaimer: "💡 คำอธิบายมีไว้เพื่อการอ้างอิงเท่านั้น"
+    'th': {
+        title: "MenuLens 🔍",
+        slogan: "ถ่ายรูปเมนูเพื่อดูรายละเอียด",
+        btn: "ถ่ายรูปเมนู",
+        loading: "AI กำลังวิเคราะห์เมนู... ⏳",
+        disclaimer: "💡 คำอธิบายมีไว้เพื่อการอ้างอิงเท่านั้น"
     },
-    'vi': { // 9. 베트남어
-        title: "MenuLens 🔍", slogan: "Chụp ảnh thực đơn để xem chi tiết.", btn: "Chụp ảnh", loading: "AI đang phân tích thực đơn... ⏳", disclaimer: "💡 Mô tả chỉ mang tính tham khảo."
+    'vi': {
+        title: "MenuLens 🔍",
+        slogan: "Chụp ảnh thực đơn để xem chi tiết.",
+        btn: "Chụp ảnh",
+        loading: "AI đang phân tích thực đơn... ⏳",
+        disclaimer: "💡 Mô tả chỉ mang tính tham khảo."
     },
-    'id': { // 10. 인도네시아어
-        title: "MenuLens 🔍", slogan: "Ambil foto menu untuk melihat detail.", btn: "Ambil Foto", loading: "AI sedang menganalisis menu... ⏳", disclaimer: "💡 Deskripsi hanya untuk referensi."
+    'id': {
+        title: "MenuLens 🔍",
+        slogan: "Ambil foto menu untuk melihat detail.",
+        btn: "Ambil Foto",
+        loading: "AI sedang menganalisis menu... ⏳",
+        disclaimer: "💡 Deskripsi hanya untuk referensi."
     },
-    'ar': { // 11. 아랍어 (우측 정렬 언어)
-        title: "MenuLens 🔍", slogan: "التقط صورة للقائمة للحصول على التفاصيل.", btn: "التقط صورة", loading: "الذكاء الاصطناعي يحلل القائمة... ⏳", disclaimer: "💡 الأوصاف للرجوع إليها فقط وقد تختلف."
+    'ar': {
+        title: "MenuLens 🔍",
+        slogan: "التقط صورة للقائمة للحصول على التفاصيل.",
+        btn: "التقط صورة",
+        loading: "الذكاء الاصطناعي يحلل القائمة... ⏳",
+        disclaimer: "💡 الأوصاف للرجوع إليها فقط وقد تختلف."
     },
-    'hi': { // 12. 힌디어
-        title: "MenuLens 🔍", slogan: "विवरण प्राप्त करने के लिए मेनू की एक तस्वीर लें।", btn: "तस्वीर लें", loading: "AI मेनू का विश्लेषण कर रहा है... ⏳", disclaimer: "💡 विवरण केवल संदर्भ के लिए हैं।"
+    'hi': {
+        title: "MenuLens 🔍",
+        slogan: "विवरण प्राप्त करने के लिए मेनू की एक तस्वीर लें।",
+        btn: "तस्वीर लें",
+        loading: "AI मेनू का विश्लेषण कर रहा है... ⏳",
+        disclaimer: "💡 विवरण केवल संदर्भ के लिए हैं।"
     },
-    'it': { // 13. 이탈리아어
-        title: "MenuLens 🔍", slogan: "Scatta una foto del menu per i dettagli.", btn: "Scatta una foto", loading: "L'IA sta analizzando il menu... ⏳", disclaimer: "💡 Le descrizioni sono solo di riferimento."
+    'it': {
+        title: "MenuLens 🔍",
+        slogan: "Scatta una foto del menu per i dettagli.",
+        btn: "Scatta una foto",
+        loading: "L'IA sta analizzando il menu... ⏳",
+        disclaimer: "💡 Le descrizioni sono solo di riferimento."
     },
-    'pt': { // 14. 포르투갈어
-        title: "MenuLens 🔍", slogan: "Tire uma foto do menu para ver os detalhes.", btn: "Tirar uma foto", loading: "A IA está analisando o menu... ⏳", disclaimer: "💡 As descrições são apenas para referência."
+    'pt': {
+        title: "MenuLens 🔍",
+        slogan: "Tire uma foto do menu para ver os detalhes.",
+        btn: "Tirar uma foto",
+        loading: "A IA está analisando o menu... ⏳",
+        disclaimer: "💡 As descrições são apenas para referência."
     },
-    'ru': { // 15. 러시아어
-        title: "MenuLens 🔍", slogan: "Сделайте фото меню, чтобы узнать подробности.", btn: "Сделать фото", loading: "ИИ анализирует меню... ⏳", disclaimer: "💡 Описания приведены только для справки."
+    'ru': {
+        title: "MenuLens 🔍",
+        slogan: "Сделайте фото меню, чтобы узнать подробности.",
+        btn: "Сделать фото",
+        loading: "ИИ анализирует меню... ⏳",
+        disclaimer: "💡 Описания приведены только для справки."
     }
 };
 
@@ -350,4 +496,3 @@ document.getElementById('appSlogan').innerText = uiTranslations[currentLang].slo
 document.getElementById('btnScan').innerText = uiTranslations[currentLang].btn;
 document.getElementById('loading').innerText = uiTranslations[currentLang].loading;
 document.getElementById('disclaimer').innerText = uiTranslations[currentLang].disclaimer;
-
