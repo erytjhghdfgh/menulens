@@ -32,6 +32,7 @@ async function analyzeMenuWithAI(base64Data) {
     const url = '/api/analyze';
 
     // 💡 에러의 주범이었던 백틱 닫기 완료 + 비용 절감 & 친절한 가이드 프롬프트
+
     const promptText = `
 You are a friendly local food guide helping a foreign traveler.
 Look at the menu image and explain it to the traveler in "${userLanguage}". 
@@ -47,17 +48,13 @@ Look at the menu image and explain it to the traveler in "${userLanguage}".
 ### 🍽️ [Original Name] 
 * **어떤 요리인가요?**: [Translated Name] / [Brief 1-sentence description including main ingredients]
 * **맛과 식감**: [1 sentence summarizing taste and texture]
-* **가이드의 팁**: [Include how to eat it IF it's unique. If it's obvious, skip this].
-* **추천 지수**: [Choose ONLY ONE of the following tags that best fits]
-  - 🟢 처음 먹는 사람에게 무난해요
-  - 🟡 현지 느낌을 원하면 추천해요
-  - 🟠 향이나 식감이 조금 낯설 수 있어요
-  - 🔴 현지인 찐맛! 호불호가 강할 수 있어요
+* **가격**: [Original Price and Currency] ([환율 계산해보기](https://www.google.com/search?q=[Original+Price]+[Original+Currency]+to+${targetCurrency}))
+* **여행자 팁**: [Include ONLY IF there is a unique way to eat it or cultural context. If ordinary, completely OMIT this line]
+* **⚠️ 주의 사항**: [Include ONLY IF there are allergens, organ meats, strong spices, or polarizing ingredients. If none, completely OMIT this line]
 
-[Important Constraint]
-Only list items clearly visible on the menu. Do not invent items.
-Output the response ONLY in Markdown format.
-`; // <-- 여기가 안 닫혀서 에러가 났었습니다!
+[Important Constraint] Only list items clearly visible on the menu. Do not invent items. Output the response ONLY in Markdown format. 
+`;
+
 
     const requestBody = {
         contents: [{
