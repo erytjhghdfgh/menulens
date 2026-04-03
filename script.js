@@ -199,36 +199,67 @@ async function parseAndRender(rawText) {
         resultContainer.appendChild(cardDiv);
     }
 }
+// ==========================================
+// 🌍 4. 다국어 UI (글로벌 Top 15 언어 지원)
+// ==========================================
 const uiTranslations = {
-    'ko': {
-        title: "MenuLens 🔍",
-        slogan: "메뉴판을 카메라로 찍으면 정보를 알려드립니다.",
-        btn: "메뉴 스캔하기",
-        loading: "AI가 메뉴를 분석하고 있어요... ⏳",
-        disclaimer: "💡 설명은 참고용이며, 실제 식당 요리와 다를 수 있습니다."
+    'ko': { // 1. 한국어
+        title: "MenuLens 🔍", slogan: "메뉴판을 카메라로 찍으면 정보를 알려드립니다.", btn: "메뉴 사진 찍기", loading: "AI가 메뉴를 분석하고 있어요... ⏳", disclaimer: "💡 설명은 참고용이며, 실제 식당 요리와 다를 수 있습니다."
     },
-    'en': {
-        title: "MenuLens 🔍",
-        slogan: "Snap a photo of the menu to get details.",
-        btn: "Scan Menu",
-        loading: "AI is analyzing the menu... ⏳",
-        disclaimer: "💡 Descriptions are for reference only and may vary from actual dishes."
+    'en': { // 2. 영어 (기본값)
+        title: "MenuLens 🔍", slogan: "Take a photo of the menu to get details.", btn: "Take a Photo", loading: "AI is analyzing the menu... ⏳", disclaimer: "💡 Descriptions are for reference only and may vary."
     },
-    'ja': {
-        title: "MenuLens 🔍",
-        slogan: "メニューを撮影すると情報が表示されます。",
-        btn: "メニュー를스캔",
-        loading: "AI가 메뉴를 분석하고 있습니다... ⏳",
-        disclaimer: "💡 説明は参考用であり、実際の料理と異なる場合があります。"
+    'ja': { // 3. 일본어
+        title: "MenuLens 🔍", slogan: "メニューの写真を撮ると情報が表示されます。", btn: "写真を撮る", loading: "AIがメニューを分析しています... ⏳", disclaimer: "💡 説明は参考用であり、実際の料理と異なる場合があります。"
+    },
+    'zh': { // 4. 중국어
+        title: "MenuLens 🔍", slogan: "拍下菜单照片即可获取详细信息。", btn: "拍下菜单", loading: "AI 正在分析菜单... ⏳", disclaimer: "💡 说明仅供参考，可能与实际菜品有所不同。"
+    },
+    'es': { // 5. 스페인어
+        title: "MenuLens 🔍", slogan: "Toma una foto del menú para ver los detalles.", btn: "Tomar una foto", loading: "La IA está analizando el menú... ⏳", disclaimer: "💡 Las descripciones son solo de referencia."
+    },
+    'fr': { // 6. 프랑스어
+        title: "MenuLens 🔍", slogan: "Prenez une photo du menu pour obtenir des détails.", btn: "Prendre une photo", loading: "L'IA analyse le menu... ⏳", disclaimer: "💡 Les descriptions sont fournies à titre indicatif."
+    },
+    'de': { // 7. 독일어
+        title: "MenuLens 🔍", slogan: "Machen Sie ein Foto der Speisekarte für Details.", btn: "Foto machen", loading: "KI analysiert das Menü... ⏳", disclaimer: "💡 Beschreibungen dienen nur als Referenz."
+    },
+    'th': { // 8. 태국어
+        title: "MenuLens 🔍", slogan: "ถ่ายรูปเมนูเพื่อดูรายละเอียด", btn: "ถ่ายรูปเมนู", loading: "AI กำลังวิเคราะห์เมนู... ⏳", disclaimer: "💡 คำอธิบายมีไว้เพื่อการอ้างอิงเท่านั้น"
+    },
+    'vi': { // 9. 베트남어
+        title: "MenuLens 🔍", slogan: "Chụp ảnh thực đơn để xem chi tiết.", btn: "Chụp ảnh", loading: "AI đang phân tích thực đơn... ⏳", disclaimer: "💡 Mô tả chỉ mang tính tham khảo."
+    },
+    'id': { // 10. 인도네시아어
+        title: "MenuLens 🔍", slogan: "Ambil foto menu untuk melihat detail.", btn: "Ambil Foto", loading: "AI sedang menganalisis menu... ⏳", disclaimer: "💡 Deskripsi hanya untuk referensi."
+    },
+    'ar': { // 11. 아랍어 (우측 정렬 언어)
+        title: "MenuLens 🔍", slogan: "التقط صورة للقائمة للحصول على التفاصيل.", btn: "التقط صورة", loading: "الذكاء الاصطناعي يحلل القائمة... ⏳", disclaimer: "💡 الأوصاف للرجوع إليها فقط وقد تختلف."
+    },
+    'hi': { // 12. 힌디어
+        title: "MenuLens 🔍", slogan: "विवरण प्राप्त करने के लिए मेनू की एक तस्वीर लें।", btn: "तस्वीर लें", loading: "AI मेनू का विश्लेषण कर रहा है... ⏳", disclaimer: "💡 विवरण केवल संदर्भ के लिए हैं।"
+    },
+    'it': { // 13. 이탈리아어
+        title: "MenuLens 🔍", slogan: "Scatta una foto del menu per i dettagli.", btn: "Scatta una foto", loading: "L'IA sta analizzando il menu... ⏳", disclaimer: "💡 Le descrizioni sono solo di riferimento."
+    },
+    'pt': { // 14. 포르투갈어
+        title: "MenuLens 🔍", slogan: "Tire uma foto do menu para ver os detalhes.", btn: "Tirar uma foto", loading: "A IA está analisando o menu... ⏳", disclaimer: "💡 As descrições são apenas para referência."
+    },
+    'ru': { // 15. 러시아어
+        title: "MenuLens 🔍", slogan: "Сделайте фото меню, чтобы узнать подробности.", btn: "Сделать фото", loading: "ИИ анализирует меню... ⏳", disclaimer: "💡 Описания приведены только для справки."
     }
 };
 
-// 언어 설정 (없으면 영어)
 const currentLang = uiTranslations[langPrefix] ? langPrefix : 'en';
 
-// 화면 글자 변경
+// 아랍어(ar)일 경우 화면을 오른쪽에서 왼쪽(RTL)으로 읽도록 방향 뒤집기
+if (currentLang === 'ar') {
+    document.body.style.direction = "rtl";
+}
+
 document.getElementById('appTitle').innerText = uiTranslations[currentLang].title;
 document.getElementById('appSlogan').innerText = uiTranslations[currentLang].slogan;
 document.getElementById('btnScan').innerText = uiTranslations[currentLang].btn;
 document.getElementById('loading').innerText = uiTranslations[currentLang].loading;
 document.getElementById('disclaimer').innerText = uiTranslations[currentLang].disclaimer;
+
