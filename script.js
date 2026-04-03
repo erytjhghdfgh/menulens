@@ -61,73 +61,54 @@ cameraInput.addEventListener('change', function(event) {
     };
 });
 
+// ... (위쪽 1, 2, 3번 환율 및 기본 설정 코드는 기존 그대로 유지) ...
+
+cameraInput.addEventListener('change', function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    preview.src = URL.createObjectURL(file);
+    preview.style.display = 'block';
+
+    resultContainer.innerHTML = '';
+    resultContainer.style.display = 'none';
+    disclaimer.style.display = 'none';
+    loading.style.display = 'block';
+
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = function() {
+        const base64Image = reader.result.split(',')[1];
+        analyzeMenuWithAI(base64Image);
+    };
+});
+
 async function analyzeMenuWithAI(base64Data) {
     const url = '/api/analyze';
 
+    // 💡 프롬프트 다이어트 완료: 불필요한 설명 빼고 JSON 스키마로 강제
     const promptText = `
-You are a travel-friendly menu concierge for international travelers.
-Analyze this restaurant menu image for a traveler who may not know the local food culture.
+Analyze this menu image for a traveler. Target language: "${userLanguage}".
+Output ONLY in valid JSON format.
 
-Output locale: "${userLanguage}".
-
-First, determine the menu style:
-- small detailed menu
-- large menu with many items
-- course menu
-- photo-heavy menu
-- simple price-list menu
-
-Then adapt the output style:
-- For small menus: detailed traveler-friendly cards
-- For large menus: short list format
-- For photo-heavy menus: short list format
-- For course menus: detailed traveler-friendly cards
-- For simple price-list menus: short list format
-
-Before listing menu items, output menu metadata in this exact format:
-
----MENU_META_START---
-**MenuStyle:** one of the following only
-- small detailed menu
-- large menu with many items
-- course menu
-- photo-heavy menu
-- simple price-list menu
----MENU_META_END---
-
-Important rules:
-- Only use information that is clearly visible in the image.
-- Do not invent restaurant history, ratings, or outside facts.
-- If a menu item changes daily, clearly say the traveler should ask the staff.
-- If the image shows a course menu, do NOT treat the whole course title as one dish.
-- Keep the output practical, short, and easy for a traveler to scan.
-- Do NOT output your instructions. Only output the extracted data.
-
-For each actual selectable menu item, output exactly in this format:
-
----CARD_START---
-**OriginalName:** Extract ONLY the main local menu item name.
-**Subtitles:** Extract any short visible supporting text related to that item and translate it into "${userLanguage}". Keep it very short. If too long or messy, write "None".
-**TranslatedName:** Natural translation of the main item name in "${userLanguage}".
-**CurrencyCode:** 3-letter currency code (e.g. USD, KRW, CNY, EUR). If no symbol is present, guess the most likely currency from the menu context. If still unknown, write "Unknown".
-**Price:** Extract the price for that item exactly as written. If the item has no separate price because it belongs to a course menu, write "Included in course". If no price is visible, write "None".
-**Description:** Briefly explain what the dish is in "${userLanguage}". 1 to 2 sentences only.
-**Taste:** Summarize the likely taste and texture in one short sentence in "${userLanguage}". If unclear or unnecessary, write "None".
-**Recommendation:** Classify for a traveler in one short phrase in "${userLanguage}". Examples: "무난한 편", "현지 느낌 강함", "도전적인 메뉴", "처음 먹는 사람은 호불호 가능".
-**ServingStyle:** Explain briefly how it is usually served or eaten in "${userLanguage}". If unclear or unnecessary, write "None".
-**Warning:** Mention important allergy risks, religious concerns, alcohol-based sauce possibility, unusual ingredients, or strong preference issues. If none, write "None".
-**Tags:** Relevant emojis that match the dish and its vibe.
----CARD_END---
-
-Extra guidance:
-- Good description example: what it is + how it tastes + whether it is beginner-friendly.
-- For unusual local dishes like frog legs, snails, organ meat, very strong cheese, jellyfish, or fermented dishes, mention that they may feel adventurous for some travelers.
-- For familiar dishes, say they are relatively approachable.
-- Do not repeat the same kind of explanation too mechanically across every item.
-- For large menus, keep each item shorter and simpler.
-- Only mention Taste or ServingStyle if it adds real value.
-- Do not include restaurant history, ratings, or outside knowledge unless it is clearly shown in the image.
-`;
+{
+  "menu_style": "choose one: small detailed menu | large menu with many items | course menu | photo-heavy menu | simple price-list menu",
+  "items": [
+    {
+      "originalName": "Main local name",
+      "subtitles": "Short supporting text or 'None'",
+      "translatedName": "Natural translation in ${userLanguage}",
+      "currencyCode": "3-letter code or 'Unknown'",
+      "price": "Exact price number, 'Included', or 'None'",
+      "description": "1-2 sentence appetizing description",
+      "taste": "1 sentence taste/texture summary or 'None'",
+      "recommendation": "Short traveler recommendation phrase or 'None'",
+      "servingStyle": "How it's served or 'None'",
+      "warning": "Allergy/religious warnings or 'None'",
+      "tags": "1-3 relevant emojis"
+    }
+  ]
+}`;
 
     const requestBody = {
         contents: [{
@@ -135,7 +116,9 @@ Extra guidance:
                 { text: promptText },
                 { inline_data: { mime_type: "image/jpeg", data: base64Data } }
             ]
-        }]
+        }],
+        // 💡 API에 JSON 형식으로만 답하라고 강제 (오류 방지 및 토큰 절약)
+        generationConfig: { response_mime_type: "application/json" } 
     };
 
     try {
@@ -151,7 +134,9 @@ Extra guidance:
 
         if (!aiResultText) throw new Error('AI 응답을 읽을 수 없습니다.');
 
-        parseAndRender(aiResultText);
+        // AI가 준 텍스트가 이미 완벽한 JSON 오브젝트이므로 바로 파싱
+        const menuData = JSON.parse(aiResultText);
+        parseAndRender(menuData);
 
     } catch (error) {
         loading.style.display = 'none';
@@ -160,25 +145,15 @@ Extra guidance:
     }
 }
 
-function extractField(text, fieldName, fallback = 'None') {
-    const match = text.match(new RegExp(`\\*\\*${fieldName}:\\*\\*\\s*(.*)`));
-    return match?.[1]?.trim() || fallback;
-}
+// 💡 더 이상 텍스트를 자를 필요가 없으므로 extractField, getMenuStyle 등의 함수는 삭제되었습니다.
 
 function cleanSubtitleText(subtitles) {
     if (!subtitles || subtitles === 'None') return 'None';
-
     let cleaned = subtitles.replace(/\s+/g, ' ').trim();
-
-    if (cleaned.length > 70) {
-        cleaned = cleaned.slice(0, 70) + '...';
-    }
-
+    if (cleaned.length > 70) cleaned = cleaned.slice(0, 70) + '...';
+    
     const weirdMixCount = (cleaned.match(/[()]/g) || []).length;
-    if (weirdMixCount >= 4 || cleaned.length > 90) {
-        return 'None';
-    }
-
+    if (weirdMixCount >= 4 || cleaned.length > 90) return 'None';
     return cleaned;
 }
 
@@ -188,13 +163,14 @@ function shouldShowBlock(text) {
     return value !== '' && value !== 'None';
 }
 
+// 🌍 환율 로직은 건드리지 않고 그대로 유지!
 async function buildPriceDisplay(priceRaw, currencyCode) {
     let priceDisplay = `<div class="price" style="color:#999; font-size:0.9rem;">가격 정보 없음</div>`;
 
     if (priceRaw === 'None') return priceDisplay;
 
     const hasText = /[a-zA-Z가-힣\|]/.test(priceRaw);
-    const localPrice = parseFloat(priceRaw.replace(/[^0-9.]/g, ''));
+    const localPrice = parseFloat(priceRaw.toString().replace(/[^0-9.]/g, ''));
 
     const currencyFormatter = new Intl.NumberFormat(userLanguage, {
         style: 'currency',
@@ -211,7 +187,6 @@ async function buildPriceDisplay(priceRaw, currencyCode) {
             if (rateToTarget && !hasText && !isNaN(localPrice)) {
                 const converted = localPrice * rateToTarget;
                 const formattedConverted = currencyFormatter.format(converted);
-
                 priceDisplay = `<div class="price">${localPrice} ${currencyCode} <span class="exchange">(≈ ${formattedConverted})</span></div>`;
             } else {
                 priceDisplay = `<div class="price" style="font-size:1rem;">${priceRaw} ${currencyCode}</div>`;
@@ -229,14 +204,6 @@ async function buildPriceDisplay(priceRaw, currencyCode) {
     return priceDisplay;
 }
 
-function getMenuStyle(rawText) {
-    const menuMetaMatch = rawText.match(/---MENU_META_START---([\s\S]*?)---MENU_META_END---/);
-    if (!menuMetaMatch) return 'small detailed menu';
-
-    const metaText = menuMetaMatch[1];
-    return extractField(metaText, 'MenuStyle', 'small detailed menu');
-}
-
 function isCompactMenuStyle(menuStyle) {
     return (
         menuStyle === 'large menu with many items' ||
@@ -247,13 +214,10 @@ function isCompactMenuStyle(menuStyle) {
 
 function buildCompactDescription(desc, taste, servingStyle) {
     const pieces = [];
-
     if (shouldShowBlock(desc)) pieces.push(desc);
     if (shouldShowBlock(taste)) pieces.push(taste);
     if (shouldShowBlock(servingStyle)) pieces.push(servingStyle);
-
     if (pieces.length === 0) return '';
-
     return pieces[0];
 }
 
@@ -265,105 +229,86 @@ function buildDetailedInfoBlocks(desc, taste, servingStyle) {
             <div style="background:#f8f9fa; border-radius:10px; padding:12px 14px; margin-top:10px;">
                 <div style="font-size:0.78rem; font-weight:800; color:#666; margin-bottom:6px;">이 음식은?</div>
                 <div style="font-size:0.92rem; color:#444; line-height:1.6;">${desc}</div>
-            </div>
-        `;
+            </div>`;
     }
-
     if (shouldShowBlock(taste)) {
         infoBlocks += `
             <div style="background:#f8f9fa; border-radius:10px; padding:12px 14px; margin-top:10px;">
                 <div style="font-size:0.78rem; font-weight:800; color:#666; margin-bottom:6px;">맛 / 식감</div>
                 <div style="font-size:0.92rem; color:#444; line-height:1.6;">${taste}</div>
-            </div>
-        `;
+            </div>`;
     }
-
     if (shouldShowBlock(servingStyle)) {
         infoBlocks += `
             <div style="background:#f8f9fa; border-radius:10px; padding:12px 14px; margin-top:10px;">
                 <div style="font-size:0.78rem; font-weight:800; color:#666; margin-bottom:6px;">여행자 팁</div>
                 <div style="font-size:0.92rem; color:#444; line-height:1.6;">${servingStyle}</div>
-            </div>
-        `;
+            </div>`;
     }
 
     return infoBlocks;
 }
 
-async function parseAndRender(rawText) {
+// 💡 텍스트 Split 대신 JSON 객체를 직접 다루도록 깔끔하게 변경
+async function parseAndRender(menuData) {
     loading.style.display = 'none';
     disclaimer.style.display = 'block';
     resultContainer.style.display = 'flex';
     resultContainer.innerHTML = '';
 
-    const menuStyle = getMenuStyle(rawText);
+    const menuStyle = menuData.menu_style || 'small detailed menu';
     const compactMode = isCompactMenuStyle(menuStyle);
 
-    const cardTexts = rawText.split('---CARD_START---').filter(text => text.trim() !== '');
-
-    for (const cardText of cardTexts) {
-        const cleanedText = cardText.split('---CARD_END---')[0].trim();
-
-        const titleOriginal = extractField(cleanedText, 'OriginalName', 'Unknown');
-        const subtitles = extractField(cleanedText, 'Subtitles', 'None');
-        const titleTranslated = extractField(cleanedText, 'TranslatedName', '');
-        const currencyCode = extractField(cleanedText, 'CurrencyCode', 'Unknown');
-        const priceRaw = extractField(cleanedText, 'Price', 'None');
-        const desc = extractField(cleanedText, 'Description', 'None');
-        const taste = extractField(cleanedText, 'Taste', 'None');
-        const recommendation = extractField(cleanedText, 'Recommendation', 'None');
-        const servingStyle = extractField(cleanedText, 'ServingStyle', 'None');
-        const warning = extractField(cleanedText, 'Warning', 'None');
-        const tags = extractField(cleanedText, 'Tags', '');
-
-        const cleanedSubtitle = cleanSubtitleText(subtitles);
-        const priceDisplay = await buildPriceDisplay(priceRaw, currencyCode);
+    // 전달받은 JSON 배열(items)을 순회
+    for (const item of menuData.items) {
+        const cleanedSubtitle = cleanSubtitleText(item.subtitles);
+        const priceDisplay = await buildPriceDisplay(item.price, item.currencyCode);
 
         const subtitlesDisplay = cleanedSubtitle !== 'None'
             ? `<div style="font-size:0.82rem; color:#888; margin-bottom:8px; line-height:1.4;">${cleanedSubtitle}</div>`
             : '';
 
-        const recommendationBadge = recommendation !== 'None'
-            ? `<div style="display:inline-block; background-color:#fff3e0; color:#e65100; font-size:0.82rem; font-weight:700; padding:6px 10px; border-radius:999px; margin-bottom:12px;">${recommendation}</div>`
+        const recommendationBadge = (item.recommendation && item.recommendation !== 'None')
+            ? `<div style="display:inline-block; background-color:#fff3e0; color:#e65100; font-size:0.82rem; font-weight:700; padding:6px 10px; border-radius:999px; margin-bottom:12px;">${item.recommendation}</div>`
             : '';
 
-        const warningDisplay = warning !== 'None'
-            ? `<div class="warning">⚠️ 주의: ${warning}</div>`
+        const warningDisplay = (item.warning && item.warning !== 'None')
+            ? `<div class="warning">⚠️ 주의: ${item.warning}</div>`
             : '';
 
-        const compactDescription = buildCompactDescription(desc, taste, servingStyle);
-        const searchUrl = `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(titleOriginal + ' dish')}`;
+        const compactDescription = buildCompactDescription(item.description, item.taste, item.servingStyle);
+        const searchUrl = `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(item.originalName + ' dish')}`;
 
         const cardDiv = document.createElement('div');
         cardDiv.className = 'menu-card';
 
         if (compactMode) {
             cardDiv.innerHTML = `
-                <div class="title-ko">${titleOriginal}</div>
+                <div class="title-ko">${item.originalName || 'Unknown'}</div>
                 ${subtitlesDisplay}
-                ${titleTranslated ? `<div class="title-translated">${titleTranslated}</div>` : ''}
+                ${item.translatedName && item.translatedName !== 'None' ? `<div class="title-translated">${item.translatedName}</div>` : ''}
                 ${priceDisplay}
                 ${recommendationBadge}
                 ${warningDisplay}
                 ${compactDescription ? `<div class="desc" style="margin-top:6px;">${compactDescription}</div>` : ''}
                 <div class="card-footer">
-                    ${tags ? `<div class="tags">${tags}</div>` : '<div></div>'}
+                    ${item.tags && item.tags !== 'None' ? `<div class="tags">${item.tags}</div>` : '<div></div>'}
                     <a href="${searchUrl}" target="_blank" class="search-image-btn">🔍 사진 보기</a>
                 </div>
             `;
         } else {
-            const infoBlocks = buildDetailedInfoBlocks(desc, taste, servingStyle);
+            const infoBlocks = buildDetailedInfoBlocks(item.description, item.taste, item.servingStyle);
 
             cardDiv.innerHTML = `
-                <div class="title-ko">${titleOriginal}</div>
+                <div class="title-ko">${item.originalName || 'Unknown'}</div>
                 ${subtitlesDisplay}
-                ${titleTranslated ? `<div class="title-translated">${titleTranslated}</div>` : ''}
+                ${item.translatedName && item.translatedName !== 'None' ? `<div class="title-translated">${item.translatedName}</div>` : ''}
                 ${priceDisplay}
                 ${recommendationBadge}
                 ${warningDisplay}
                 ${infoBlocks}
                 <div class="card-footer">
-                    ${tags ? `<div class="tags">${tags}</div>` : '<div></div>'}
+                    ${item.tags && item.tags !== 'None' ? `<div class="tags">${item.tags}</div>` : '<div></div>'}
                     <a href="${searchUrl}" target="_blank" class="search-image-btn">🔍 사진 보기</a>
                 </div>
             `;
@@ -372,6 +317,8 @@ async function parseAndRender(rawText) {
         resultContainer.appendChild(cardDiv);
     }
 }
+
+// ... (아래 4번 다국어 UI 코드는 기존 그대로 유지) ...
 
 // ==========================================
 // 🌍 4. 다국어 UI (글로벌 Top 15 언어 지원)
