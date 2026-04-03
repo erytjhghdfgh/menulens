@@ -66,26 +66,27 @@ async function analyzeMenuWithAI(base64Data) {
 
     // 💡 에러의 주범이었던 백틱 닫기 완료 + 비용 절감 & 친절한 가이드 프롬프트
 
-    const promptText = `
+const promptText = `
 You are a friendly local food guide helping a foreign traveler.
 Look at the menu image and explain it to the traveler in "${userLanguage}". 
 
 [Rules to save tokens and keep it friendly]
 1. Do not write long paragraphs. Be conversational but extremely concise.
 
-2. Start your response with a 1-2 sentence overview of how this menu works under the heading "### 📖 메뉴판 읽는 법". 
+2. Start your response with a 1-2 sentence overview of how this menu works under the heading "### 📖 [Translate "메뉴판 읽는 법"]". 
    - Explain if it is an à la carte menu, a set course (e.g., choose 1 appetizer + 1 main), tapas style for sharing, or a daily special board.
 
 3. Extract ONLY the actual food/drink items explicitly visible on the menu. For each item, use this exact format:
 
 ### 🍽️ [Original Name] 
-* **어떤 요리인가요?**: [Translated Name] / [Brief 1-sentence description including main ingredients]
-* **맛과 식감**: [1 sentence summarizing taste and texture]
-* **가격**: [Original Price and Currency] ([환율 계산해보기](https://www.google.com/search?q=[Original+Price]+[Original+Currency]+to+${targetCurrency}))
-* **여행자 팁**: [Include ONLY IF there is a unique way to eat it or cultural context. If ordinary, completely OMIT this line]
-* **⚠️ 주의 사항**: [Include ONLY IF there are allergens, organ meats, strong spices, or polarizing ingredients. If none, completely OMIT this line]
+* **[Translate "어떤 요리인가요?"]**: [Translated Name] / [Explain what the dish is for a traveler. Include the main ingredients, cooking style, likely taste or texture, and whether it may feel familiar or unfamiliar to a first-time visitor. Keep it concise but useful, in "${userLanguage}", within 3 sentences.]
+* **[Translate "가격"]**: [Original Price and Currency] ([Translate "환율 계산해보기"](https://www.google.com/search?q=[Original+Price]+[Original+Currency]+to+${targetCurrency}))
+* **[Translate "여행자 팁"]**: [1 brief sentence. Include how to eat it IF it's unique. If it's ordinary, completely OMIT this line]
+* **⚠️ [Translate "주의 사항"]**: [1 brief sentence. Include ONLY IF there are allergens, organ meats, strong spices, or polarizing ingredients. If none, completely OMIT this line]
 
-[Important Constraint] Only list items clearly visible on the menu. Do not invent items. Output the response ONLY in Markdown format. 
+[Important Constraint] 
+Only list items clearly visible on the menu. Do not invent items. 
+Output the response ONLY in Markdown format. 
 `;
 
 
