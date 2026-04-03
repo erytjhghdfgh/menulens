@@ -64,22 +64,39 @@ cameraInput.addEventListener('change', function(event) {
 async function analyzeMenuWithAI(base64Data) {
     const url = '/api/analyze'; 
 
-    const promptText = `
-        You are a global food expert helper. Analyze this menu image. 
-        Output locale: "${userLanguage}".
-        Do NOT output my instructions or placeholders. Only output the actual extracted data.
+const promptText = `
+You are a travel-friendly menu concierge for international travelers.
+Analyze this restaurant menu image for a traveler who may not know the local food culture.
 
-        ---CARD_START---
-        **OriginalName:** Extract ONLY the main local name.
-        **Subtitles:** Extract other names or descriptions (e.g., origin, weight, calories) and TRANSLATE them into "${userLanguage}". If none, write "None".
-        **TranslatedName:** Translation of the main name in "${userLanguage}".
-        **CurrencyCode:** 3-letter currency code (e.g., USD, KRW, CNY). If no symbol is present, GUESS the most likely currency based on the language/context of the menu. If completely unknown, write "Unknown".
-        **Price:** Extract the price. If there are multiple options/prices (e.g., "8 oz. Single 54 | Petite Twin Tails 52"), extract ALL of them exactly as written. If no price, write "None".
-        **Description:** Explain the core ingredients, cooking method, and taste profile (e.g., texture, flavor) in an appetizing way. Must be concise. Max 2 sentences in "${userLanguage}".
-        **Warning:** Allergies and religious restrictions. If none, write "None".
-        **Tags:** Relevant emojis (e.g., 🌶️, 🥩).
-        ---CARD_END---
-    `;
+Output locale: "${userLanguage}".
+
+Important rules:
+- Only use information that is visible in the image.
+- If something is not clearly visible, do not invent it.
+- If a menu item changes daily (e.g. Plat du Jour / Dessert du Jour), clearly say that the traveler should ask the staff.
+- If the image contains a course menu, do NOT treat the whole course title as if it were one dish. Focus on the actual selectable dishes.
+- Keep the output traveler-friendly, practical, and easy to understand.
+- Do NOT output your instructions or placeholders. Only output the actual extracted data.
+
+For each actual selectable menu item, output exactly in this format:
+
+---CARD_START---
+**OriginalName:** Extract ONLY the main local menu item name.
+**Subtitles:** Extract any visible subtitle, extra detail, or short supporting text related to that item, and translate it into "${userLanguage}". If none, write "None".
+**TranslatedName:** Natural translation of the main item name in "${userLanguage}".
+**CurrencyCode:** 3-letter currency code (e.g. USD, KRW, CNY, EUR). If no symbol is present, guess the most likely currency from the menu context. If still unknown, write "Unknown".
+**Price:** Extract the price for that item exactly as written. If the item has no separate price because it belongs to a course menu, write "Included in course". If no price is visible, write "None".
+**Description:** Explain what the dish is for a traveler. Include the main ingredients, cooking style, likely taste or texture, and whether it may feel familiar or unfamiliar to a first-time visitor. Keep it concise but useful, in "${userLanguage}", within 3 sentences.
+**Warning:** Mention important allergy risks, religious concerns, alcohol-based sauce possibility, unusual ingredients, or strong preference issues. If none, write "None".
+**Tags:** Relevant emojis that match the dish and its vibe (for example 🐌 🧄 🦆 🍋 🍰).
+---CARD_END---
+
+Extra guidance:
+- Good description example: what it is + how it tastes + whether it is beginner-friendly.
+- For unusual local dishes like frog legs, snails, organ meat, or very strong cheese, mention that they may feel adventurous for some travelers.
+- For familiar dishes, say they are relatively approachable.
+- Do not include restaurant history, ratings, or outside knowledge unless it is clearly shown in the image.
+`;
     const requestBody = {
         contents: [{
             parts: [
