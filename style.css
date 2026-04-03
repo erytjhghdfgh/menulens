@@ -26,61 +26,44 @@ body {
     padding: 12px 15px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 15px; text-align: center; border: 1px solid #ffeeba;
 }
 
-/* 3. 결과 카드 디자인 */
+/* 3. 친절한 가이드 뷰 (마크다운 렌더링 영역) 디자인 */
 #resultContainer { width: 100%; max-width: 600px; display: none; flex-direction: column; gap: 15px; }
-.menu-card { background-color: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-.menu-card .title-ko { font-size: 1.15rem; font-weight: 800; color: #111; margin-bottom: 2px; }
-.menu-card .title-translated { font-size: 0.95rem; color: #666; font-weight: 500; margin-bottom: 8px; }
 
-.menu-card .price { font-weight: 800; font-size: 1.15rem; color: #e65100; margin-bottom: 10px; }
-.menu-card .price .exchange { font-size: 0.9rem; color: #777; font-weight: 500; }
-.menu-card .warning { background-color: #ffebee; color: #c62828; padding: 8px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; margin-bottom: 12px; }
-
-.menu-card .desc { font-size: 0.9rem; color: #444; line-height: 1.6; margin-bottom: 12px; }
-.card-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; }
-.menu-card .tags { font-size: 1.1rem; background-color: #f8f9fa; padding: 6px 10px; border-radius: 8px; display: inline-flex; gap: 6px; }
-.search-image-btn { display: inline-flex; align-items: center; padding: 8px 14px; font-size: 0.85rem; font-weight: 600; color: #555; background-color: #f1f3f5; border-radius: 20px; text-decoration: none; }
-
-.menu-subtitle {
-    font-size: 0.82rem;
-    color: #888;
-    margin-bottom: 8px;
-    line-height: 1.4;
+.markdown-body {
+    background-color: white; 
+    padding: 25px; 
+    border-radius: 12px; 
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08); 
+    line-height: 1.7; 
+    font-size: 1.05rem; 
+    color: #333;
 }
 
-.recommend-badge {
-    display: inline-block;
-    background-color: #fff3e0;
+.markdown-body h3 {
     color: #e65100;
-    font-size: 0.82rem;
-    font-weight: 700;
-    padding: 6px 10px;
-    border-radius: 999px;
-    margin-bottom: 12px;
+    margin-top: 25px;
+    margin-bottom: 10px;
+    font-size: 1.2rem;
+    border-bottom: 2px solid #fff3e0;
+    padding-bottom: 5px;
 }
 
-.info-blocks-wrap {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-top: 6px;
+.markdown-body h3:first-child {
+    margin-top: 0;
 }
 
-.info-block {
-    background-color: #f8f9fa;
-    border-radius: 10px;
-    padding: 12px 14px;
+.markdown-body ul {
+    margin-left: 0;
+    padding-left: 0;
+    list-style-type: none;
+    margin-bottom: 15px;
 }
 
-.info-label {
-    font-size: 0.78rem;
-    font-weight: 800;
-    color: #666;
-    margin-bottom: 6px;
+.markdown-body li {
+    margin-bottom: 8px;
+    font-size: 0.95rem;
 }
 
-.info-text {
-    font-size: 0.92rem;
+.markdown-body strong {
     color: #444;
-    line-height: 1.6;
 }
