@@ -70,6 +70,19 @@ Analyze this restaurant menu image for a traveler who may not know the local foo
 
 Output locale: "${userLanguage}".
 
+First, determine the menu style:
+- small detailed menu
+- large menu with many items
+- course menu
+- photo-heavy menu
+- simple price-list menu
+
+Then adapt the output style:
+- For small menus: detailed traveler-friendly cards
+- For large menus: short list format
+- For photo-heavy menus: group items into categories
+- For simple price-list menus: show short explanation only
+
 Important rules:
 - Only use information that is clearly visible in the image.
 - Do not invent restaurant history, ratings, or outside facts.
