@@ -222,34 +222,34 @@ function buildCompactDescription(desc, taste, servingStyle) {
 }
 
 function buildDetailedInfoBlocks(desc, taste, servingStyle) {
-    let infoBlocks = '';
+    let infoBlocks = '<div class="info-blocks-wrap">'; // CSS 클래스 활용
 
     if (shouldShowBlock(desc)) {
         infoBlocks += `
-            <div style="background:#f8f9fa; border-radius:10px; padding:12px 14px; margin-top:10px;">
-                <div style="font-size:0.78rem; font-weight:800; color:#666; margin-bottom:6px;">이 음식은?</div>
-                <div style="font-size:0.92rem; color:#444; line-height:1.6;">${desc}</div>
+            <div class="info-block">
+                <div class="info-label">이 음식은?</div>
+                <div class="info-text">${desc}</div>
             </div>`;
     }
     if (shouldShowBlock(taste)) {
         infoBlocks += `
-            <div style="background:#f8f9fa; border-radius:10px; padding:12px 14px; margin-top:10px;">
-                <div style="font-size:0.78rem; font-weight:800; color:#666; margin-bottom:6px;">맛 / 식감</div>
-                <div style="font-size:0.92rem; color:#444; line-height:1.6;">${taste}</div>
+            <div class="info-block">
+                <div class="info-label">맛 / 식감</div>
+                <div class="info-text">${taste}</div>
             </div>`;
     }
     if (shouldShowBlock(servingStyle)) {
         infoBlocks += `
-            <div style="background:#f8f9fa; border-radius:10px; padding:12px 14px; margin-top:10px;">
-                <div style="font-size:0.78rem; font-weight:800; color:#666; margin-bottom:6px;">여행자 팁</div>
-                <div style="font-size:0.92rem; color:#444; line-height:1.6;">${servingStyle}</div>
+            <div class="info-block">
+                <div class="info-label">여행자 팁</div>
+                <div class="info-text">${servingStyle}</div>
             </div>`;
     }
 
-    return infoBlocks;
+    infoBlocks += '</div>';
+    return infoBlocks === '<div class="info-blocks-wrap"></div>' ? '' : infoBlocks;
 }
 
-// 💡 텍스트 Split 대신 JSON 객체를 직접 다루도록 깔끔하게 변경
 async function parseAndRender(menuData) {
     loading.style.display = 'none';
     disclaimer.style.display = 'block';
@@ -259,17 +259,17 @@ async function parseAndRender(menuData) {
     const menuStyle = menuData.menu_style || 'small detailed menu';
     const compactMode = isCompactMenuStyle(menuStyle);
 
-    // 전달받은 JSON 배열(items)을 순회
     for (const item of menuData.items) {
         const cleanedSubtitle = cleanSubtitleText(item.subtitles);
         const priceDisplay = await buildPriceDisplay(item.price, item.currencyCode);
 
+        // 하드코딩된 스타일 대신 CSS 클래스 사용
         const subtitlesDisplay = cleanedSubtitle !== 'None'
-            ? `<div style="font-size:0.82rem; color:#888; margin-bottom:8px; line-height:1.4;">${cleanedSubtitle}</div>`
+            ? `<div class="menu-subtitle">${cleanedSubtitle}</div>`
             : '';
 
         const recommendationBadge = (item.recommendation && item.recommendation !== 'None')
-            ? `<div style="display:inline-block; background-color:#fff3e0; color:#e65100; font-size:0.82rem; font-weight:700; padding:6px 10px; border-radius:999px; margin-bottom:12px;">${item.recommendation}</div>`
+            ? `<div class="recommend-badge">${item.recommendation}</div>`
             : '';
 
         const warningDisplay = (item.warning && item.warning !== 'None')
@@ -277,7 +277,8 @@ async function parseAndRender(menuData) {
             : '';
 
         const compactDescription = buildCompactDescription(item.description, item.taste, item.servingStyle);
-        const searchUrl = `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(item.originalName + ' dish')}`;
+        // 검색 쿼리에 타겟 언어를 추가하여 더 정확한 이미지 검색 유도
+        const searchUrl = `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(item.originalName + ' dish ' + targetCurrency.slice(0,2))}`;
 
         const cardDiv = document.createElement('div');
         cardDiv.className = 'menu-card';
@@ -290,7 +291,7 @@ async function parseAndRender(menuData) {
                 ${priceDisplay}
                 ${recommendationBadge}
                 ${warningDisplay}
-                ${compactDescription ? `<div class="desc" style="margin-top:6px;">${compactDescription}</div>` : ''}
+                ${compactDescription ? `<div class="desc">${compactDescription}</div>` : ''}
                 <div class="card-footer">
                     ${item.tags && item.tags !== 'None' ? `<div class="tags">${item.tags}</div>` : '<div></div>'}
                     <a href="${searchUrl}" target="_blank" class="search-image-btn">🔍 사진 보기</a>
