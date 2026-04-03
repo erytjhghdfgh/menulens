@@ -2,6 +2,39 @@
 const userLanguage = navigator.language || 'en-US';
 const langPrefix = userLanguage.split('-')[0];
 
+// 🌍 2. 글로벌 화폐 매핑 사전 (제가 실수로 지웠던 부분입니다 😭)
+const currencyMap = {
+    'ko': 'KRW', 'ko-KR': 'KRW',
+    'ja': 'JPY', 'ja-JP': 'JPY',
+    'zh': 'CNY', 'zh-CN': 'CNY',
+    'zh-TW': 'TWD',
+    'zh-HK': 'HKD',
+    'th': 'THB', 'th-TH': 'THB',
+    'vi': 'VND', 'vi-VN': 'VND',
+    'id': 'IDR', 'id-ID': 'IDR',
+    'ms': 'MYR', 'ms-MY': 'MYR',
+    'tl': 'PHP', 'fil': 'PHP',
+    'hi': 'INR', 'hi-IN': 'INR',
+    'en-US': 'USD',
+    'en-CA': 'CAD',
+    'es-MX': 'MXN',
+    'pt-BR': 'BRL',
+    'en-GB': 'GBP',
+    'fr': 'EUR', 'fr-FR': 'EUR',
+    'de': 'EUR', 'de-DE': 'EUR',
+    'es': 'EUR', 'es-ES': 'EUR',
+    'it': 'EUR', 'it-IT': 'EUR',
+    'ru': 'RUB', 'ru-RU': 'RUB',
+    'tr': 'TRY', 'tr-TR': 'TRY',
+    'en-AU': 'AUD',
+    'en-NZ': 'NZD',
+    'ar-AE': 'AED',
+    'ar-SA': 'SAR',
+};
+
+// 🌍 3. 목표 화폐 결정 로직
+const targetCurrency = currencyMap[userLanguage] || currencyMap[langPrefix] || 'USD';
+
 const cameraInput = document.getElementById('cameraInput');
 const preview = document.getElementById('preview');
 const resultContainer = document.getElementById('resultContainer');
