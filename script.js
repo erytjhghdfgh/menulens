@@ -104,7 +104,7 @@ Look at the menu image and explain it to the traveler in "${userLanguage}".
 
 3. Extract ONLY the actual food/drink items explicitly visible on the menu. For each item, use this exact format:
 
-### 🍽️ [Original Name] 
+### 🍽️ [Original Name] (<a href="https://www.google.com/search?tbm=isch&q=[Original+Name]+dish" target="_blank" style="font-size: 0.9rem; text-decoration: none;">📸 [Translate "사진 보기"]</a>)
 * **[Translate "어떤 요리인가요?"]**: [Translated Name] / [Explain what the dish is for a traveler. Include the main ingredients, cooking style, likely taste or texture, and whether it may feel familiar or unfamiliar to a first-time visitor. Keep it concise but useful, in "${userLanguage}", within 3 sentences.]
 * **[Translate "가격"]**: [TRANSLATE any quantities, sizes, or options into "${userLanguage}" (e.g., 6 pieces, 3 slices, Large/Small) and state the exact price clearly] (<a href="https://www.google.com/search?q=[Extract ONLY the FIRST numerical price without any text or symbols]+[Original Currency]+to+${targetCurrency}" target="_blank">🔍 [Translate "환율 계산해보기"]</a>)
 * **[Translate "여행자 팁"]**: [1 brief sentence. Include how to eat it IF it's unique. If it's ordinary, completely OMIT this line]
