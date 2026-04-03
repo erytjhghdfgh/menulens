@@ -71,25 +71,29 @@ Analyze this restaurant menu image for a traveler who may not know the local foo
 Output locale: "${userLanguage}".
 
 Important rules:
-- Only use information that is visible in the image.
-- If something is not clearly visible, do not invent it.
-- If a menu item changes daily (e.g. Plat du Jour / Dessert du Jour), clearly say that the traveler should ask the staff.
-- If the image contains a course menu, do NOT treat the whole course title as if it were one dish. Focus on the actual selectable dishes.
-- Keep the output traveler-friendly, practical, and easy to understand.
-- Do NOT output your instructions or placeholders. Only output the actual extracted data.
+- Only use information that is clearly visible in the image.
+- Do not invent restaurant history, ratings, or outside facts.
+- If a menu item changes daily, clearly say the traveler should ask the staff.
+- If the image shows a course menu, do NOT treat the whole course title as one dish.
+- Keep the output practical, short, and easy for a traveler to scan.
+- Do NOT output your instructions. Only output the extracted data.
 
 For each actual selectable menu item, output exactly in this format:
 
 ---CARD_START---
 **OriginalName:** Extract ONLY the main local menu item name.
-**Subtitles:** Extract any visible subtitle, extra detail, or short supporting text related to that item, and translate it into "${userLanguage}". If none, write "None".
+**Subtitles:** Extract any short visible supporting text related to that item and translate it into "${userLanguage}". Keep it very short. If too long or messy, write "None".
 **TranslatedName:** Natural translation of the main item name in "${userLanguage}".
 **CurrencyCode:** 3-letter currency code (e.g. USD, KRW, CNY, EUR). If no symbol is present, guess the most likely currency from the menu context. If still unknown, write "Unknown".
 **Price:** Extract the price for that item exactly as written. If the item has no separate price because it belongs to a course menu, write "Included in course". If no price is visible, write "None".
-**Description:** Explain what the dish is for a traveler. Include the main ingredients, cooking style, likely taste or texture, and whether it may feel familiar or unfamiliar to a first-time visitor. Keep it concise but useful, in "${userLanguage}", within 3 sentences.
+**Description:** Briefly explain what the dish is in "${userLanguage}". 1 to 2 sentences only.
+**Taste:** Summarize the likely taste and texture in one short sentence in "${userLanguage}". If unclear, write "None".
+**Recommendation:** Classify for a traveler in one short phrase in "${userLanguage}". Examples: "무난한 편", "현지 느낌 강함", "도전적인 메뉴", "처음 먹는 사람은 호불호 가능".
+**ServingStyle:** Explain briefly how it is usually served or eaten in "${userLanguage}". If unclear, write "None".
 **Warning:** Mention important allergy risks, religious concerns, alcohol-based sauce possibility, unusual ingredients, or strong preference issues. If none, write "None".
-**Tags:** Relevant emojis that match the dish and its vibe (for example 🐌 🧄 🦆 🍋 🍰).
+**Tags:** Relevant emojis that match the dish and its vibe.
 ---CARD_END---
+`;
 
 Extra guidance:
 - Good description example: what it is + how it tastes + whether it is beginner-friendly.
@@ -130,28 +134,32 @@ Extra guidance:
 
 async function parseAndRender(rawText) {
     loading.style.display = 'none';
-    disclaimer.style.display = 'block'; 
-    resultContainer.style.display = 'flex'; 
+    disclaimer.style.display = 'block';
+    resultContainer.style.display = 'flex';
+    resultContainer.innerHTML = '';
 
     const cardTexts = rawText.split('---CARD_START---').filter(text => text.trim() !== '');
 
     for (const cardText of cardTexts) {
         const cleanedText = cardText.split('---CARD_END---')[0].trim();
-        
+
         const titleOriginal = cleanedText.match(/\*\*OriginalName:\*\*\s*(.*)/)?.[1] || 'Unknown';
         const subtitles = cleanedText.match(/\*\*Subtitles:\*\*\s*(.*)/)?.[1] || 'None';
         const titleTranslated = cleanedText.match(/\*\*TranslatedName:\*\*\s*(.*)/)?.[1] || '';
         const currencyCode = cleanedText.match(/\*\*CurrencyCode:\*\*\s*(.*)/)?.[1] || 'Unknown';
         const priceRaw = cleanedText.match(/\*\*Price:\*\*\s*(.*)/)?.[1] || 'None';
         const desc = cleanedText.match(/\*\*Description:\*\*\s*(.*)/)?.[1] || '';
+        const taste = cleanedText.match(/\*\*Taste:\*\*\s*(.*)/)?.[1] || 'None';
+        const recommendation = cleanedText.match(/\*\*Recommendation:\*\*\s*(.*)/)?.[1] || 'None';
+        const servingStyle = cleanedText.match(/\*\*ServingStyle:\*\*\s*(.*)/)?.[1] || 'None';
         const warning = cleanedText.match(/\*\*Warning:\*\*\s*(.*)/)?.[1] || 'None';
         const tags = cleanedText.match(/\*\*Tags:\*\*\s*(.*)/)?.[1] || '';
 
         let priceDisplay = `<div class="price" style="color:#999; font-size:0.9rem;">가격 정보 없음</div>`;
-        
+
         if (priceRaw !== 'None') {
             const hasText = /[a-zA-Z가-힣\|]/.test(priceRaw);
-            const localPrice = parseFloat(priceRaw.replace(/[^0-9.]/g, '')); 
+            const localPrice = parseFloat(priceRaw.replace(/[^0-9.]/g, ''));
 
             const currencyFormatter = new Intl.NumberFormat(userLanguage, {
                 style: 'currency',
@@ -164,25 +172,22 @@ async function parseAndRender(rawText) {
                     const res = await fetch(`https://api.exchangerate-api.com/v4/latest/${currencyCode}`);
                     const exData = await res.json();
                     const rateToTarget = exData.rates[targetCurrency];
-                    
+
                     if (rateToTarget && !hasText && !isNaN(localPrice)) {
                         const converted = localPrice * rateToTarget;
                         const formattedConverted = currencyFormatter.format(converted);
-                        
+
                         priceDisplay = `<div class="price">${localPrice} ${currencyCode} <span class="exchange">(≈ ${formattedConverted})</span></div>`;
-                    } 
-                    else {
+                    } else {
                         priceDisplay = `<div class="price" style="font-size:1rem;">${priceRaw} ${currencyCode}</div>`;
                     }
                 } catch (e) {
                     console.error("환율 변환 실패", e);
                     priceDisplay = `<div class="price" style="font-size:1rem;">${priceRaw} ${currencyCode}</div>`;
                 }
-            } 
-            else if (currencyCode === targetCurrency && !hasText && !isNaN(localPrice)) {
+            } else if (currencyCode === targetCurrency && !hasText && !isNaN(localPrice)) {
                 priceDisplay = `<div class="price">${currencyFormatter.format(localPrice)}</div>`;
-            } 
-            else {
+            } else {
                 priceDisplay = `<div class="price" style="font-size:1rem;">${priceRaw}</div>`;
             }
         }
@@ -192,9 +197,60 @@ async function parseAndRender(rawText) {
             warningDisplay = `<div class="warning">⚠️ 주의: ${warning}</div>`;
         }
 
+        // 1) subtitles 정리: 너무 길면 잘라서 보여주고, 너무 복잡하면 숨김
+        let cleanedSubtitle = subtitles;
+        if (cleanedSubtitle !== 'None') {
+            cleanedSubtitle = cleanedSubtitle.replace(/\s+/g, ' ').trim();
+
+            if (cleanedSubtitle.length > 70) {
+                cleanedSubtitle = cleanedSubtitle.slice(0, 70) + '...';
+            }
+
+            const weirdMixCount = (cleanedSubtitle.match(/[()]/g) || []).length;
+            if (weirdMixCount >= 4 || cleanedSubtitle.length > 90) {
+                cleanedSubtitle = 'None';
+            }
+        }
+
         let subtitlesDisplay = '';
-        if (subtitles !== 'None') {
-            subtitlesDisplay = `<div style="font-size: 0.85rem; color: #888; margin-bottom: 8px;">${subtitles}</div>`;
+        if (cleanedSubtitle !== 'None') {
+            subtitlesDisplay = `<div class="menu-subtitle">${cleanedSubtitle}</div>`;
+        }
+
+        // 2) 추천 판단 배지
+        let recommendationBadge = '';
+        if (recommendation !== 'None') {
+            recommendationBadge = `<div class="recommend-badge">${recommendation}</div>`;
+        }
+
+        // 3) 설명 블록 분리
+        let infoBlocks = '';
+
+        if (desc && desc !== 'None') {
+            infoBlocks += `
+                <div class="info-block">
+                    <div class="info-label">이 음식은?</div>
+                    <div class="info-text">${desc}</div>
+                </div>
+            `;
+        }
+
+        if (taste !== 'None') {
+            infoBlocks += `
+                <div class="info-block">
+                    <div class="info-label">맛 / 식감</div>
+                    <div class="info-text">${taste}</div>
+                </div>
+            `;
+        }
+
+        if (servingStyle !== 'None') {
+            infoBlocks += `
+                <div class="info-block">
+                    <div class="info-label">여행자 팁</div>
+                    <div class="info-text">${servingStyle}</div>
+                </div>
+            `;
         }
 
         const searchUrl = `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(titleOriginal + ' dish')}`;
@@ -206,8 +262,11 @@ async function parseAndRender(rawText) {
             ${subtitlesDisplay}
             ${titleTranslated ? `<div class="title-translated">${titleTranslated}</div>` : ''}
             ${priceDisplay}
+            ${recommendationBadge}
             ${warningDisplay}
-            ${desc ? `<div class="desc">${desc}</div>` : ''}
+            <div class="info-blocks-wrap">
+                ${infoBlocks}
+            </div>
             <div class="card-footer">
                 ${tags ? `<div class="tags">${tags}</div>` : '<div></div>'}
                 <a href="${searchUrl}" target="_blank" class="search-image-btn">🔍 사진 보기</a>
