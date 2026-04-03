@@ -93,7 +93,6 @@ For each actual selectable menu item, output exactly in this format:
 **Warning:** Mention important allergy risks, religious concerns, alcohol-based sauce possibility, unusual ingredients, or strong preference issues. If none, write "None".
 **Tags:** Relevant emojis that match the dish and its vibe.
 ---CARD_END---
-`;
 
 Extra guidance:
 - Good description example: what it is + how it tastes + whether it is beginner-friendly.
