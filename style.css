@@ -10,12 +10,42 @@ body {
 .app-header p { font-size: 0.95rem; color: #666; margin-top: 5px; word-break: keep-all; }
 
 /* 2. 카메라 버튼 및 로딩/알림 UI */
-.camera-btn {
-    background: linear-gradient(135deg, #ff9800, #f57c00); color: white;
-    padding: 14px 28px; font-size: 1.05rem; font-weight: 700; border: none;
-    border-radius: 50px; cursor: pointer; box-shadow: 0 4px 10px rgba(245, 124, 0, 0.3);
-    display: flex; align-items: center; gap: 8px; margin-bottom: 20px;
+/* 2. 카메라 & 갤러리 버튼 UI */
+.action-buttons {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    width: 100%;
+    max-width: 400px;
 }
+.action-btn {
+    flex: 1; /* 두 버튼을 5:5 비율로 맞춤 */
+    padding: 14px 10px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    transition: transform 0.1s;
+}
+.action-btn:active {
+    transform: scale(0.96);
+}
+.camera-btn {
+    background: linear-gradient(135deg, #ff9800, #f57c00);
+    color: white;
+    box-shadow: 0 4px 10px rgba(245, 124, 0, 0.3);
+}
+.gallery-btn {
+    background: linear-gradient(135deg, #4caf50, #388e3c); /* 갤러리 버튼은 초록색 톤으로 구분 */
+    color: white;
+    box-shadow: 0 4px 10px rgba(76, 175, 80, 0.3);
+}
+
 #cameraInput { display: none; }
 #preview { max-width: 100%; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); display: none; }
 #loading { display: none; margin-top: 10px; font-size: 0.95rem; font-weight: 600; color: #f57c00; animation: pulse 1.5s infinite; }
