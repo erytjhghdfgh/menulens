@@ -28,11 +28,11 @@ export async function onRequestPost(context) {
       body: JSON.stringify({ idToken })
     }
   );
-  if (!verifyRes.ok) {
-    return new Response(JSON.stringify({
-      error: { message: '유효하지 않은 사용자입니다.' }
-    }), { status: 403, headers: { 'Content-Type': 'application/json' } });
-  }
+const verifyData = await verifyRes.json();
+if (!verifyRes.ok || !verifyData.users || verifyData.users.length === 0) {
+  return new Response(JSON.stringify({ error: { message: '유효하지 않은 사용자입니다.' } }), 
+    { status: 403, headers: { 'Content-Type': 'application/json' } });
+}
 
   // ✅ 기존 코드
   if (!apiKey) {
