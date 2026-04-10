@@ -31,7 +31,13 @@ export async function onRequestPost(context) {
     return new Response(JSON.stringify({ error: { message: 'Image size exceeds 4MB limit.' } }), 
       { status: 'application/json' } });
   }
-  const requestBody = JSON.parse(new TextDecoder().decode(body));
+  let requestBody;
+try {
+    requestBody = JSON.parse(new TextDecoder().decode(body));
+} catch {
+    return new Response(JSON.stringify({ error: { message: 'Invalid JSON body.' } }), 
+        { status: 400, headers: { 'Content-Type': 'application/json' } });
+}
 
   // ✅ API 키 확인
   if (!apiKey) {
