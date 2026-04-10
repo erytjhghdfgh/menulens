@@ -402,18 +402,8 @@ Return JSON with status "error" and errorMessage: "The photo is too blurry to re
 if (!window.auth) {
     throw new Error(t.alertLoginRequired);
 }
-let currentUser = window.auth?.currentUser ?? null;
-if (!currentUser) {
-    for (let i = 0; i < 10; i++) {
-        await new Promise(r => setTimeout(r, 300));
-        currentUser = window.auth?.currentUser ?? null;
-        console.log(`재시도 ${i+1}회: currentUser =`, currentUser); // ← 추가
-        if (currentUser) break;
-    }
-}
-if (!currentUser) {
-    throw new Error(t.alertLoginRequired);
-}
+const currentUser = window.auth?.currentUser;
+if (!currentUser) throw new Error(t.alertLoginRequired);
 
         const idToken = await currentUser.getIdToken();
 
