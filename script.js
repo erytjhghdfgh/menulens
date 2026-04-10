@@ -1,11 +1,3 @@
-// ✅ 수정 - script.js 로드 시점 확인
-console.log('📌 script.js 로드 시점 auth:', window.auth);
-
-document.addEventListener('click', () => {
-    console.log('클릭 시점 auth:', window.auth);
-    console.log('클릭 시점 currentUser:', window.auth?.currentUser);
-});
-
 // ✅ 하단 바 터치 이벤트 처리
 document.querySelector('.bottom-sticky-bar').addEventListener('touchmove', function(e) {
     e.stopPropagation();
