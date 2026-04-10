@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms of Service · MenuLens</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --orange: #FF7300;
+            --orange-light: #fff4eb;
+            --dark: #1a1a1a;
+            --mid: #444;
+            --light: #888;
+            --border: #e8e8e8;
+            --bg: #fafaf8;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background: var(--bg);
+            color: var(--dark);
+            line-height: 1.8;
+        }
+        header {
+            background: #fff;
+            border-bottom: 2px solid var(--orange);
+            padding: 20px 24px;
+            position: sticky; top: 0; z-index: 100;
+            display: flex; align-items: center; gap: 12px;
+        }
+        header .logo { font-size: 1.3rem; font-weight: 700; color: var(--orange); }
+        header .doc-title { font-size: 0.9rem; color: var(--light); }
+        .container { max-width: 760px; margin: 0 auto; padding: 48px 24px 80px; }
+        .doc-header { margin-bottom: 48px; padding-bottom: 32px; border-bottom: 1px solid var(--border); }
+        .doc-header h1 {
+            font-family: 'Noto Serif KR', serif;
+            font-size: 2rem; font-weight: 700; color: var(--dark); margin-bottom: 12px;
+        }
+        .doc-meta { display: flex; gap: 16px; flex-wrap: wrap; font-size: 0.85rem; color: var(--light); }
+        .badge {
+            display: inline-block; background: var(--orange-light); color: var(--orange);
+            font-size: 0.75rem; font-weight: 700; padding: 3px 10px; border-radius: 20px; margin-bottom: 16px;
+        }
+        .toc { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 48px; }
+        .toc h3 { font-size: 0.85rem; font-weight: 700; color: var(--light); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 14px; }
+        .toc ol { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 6px 20px; }
+        .toc ol li a { font-size: 0.88rem; color: var(--mid); text-decoration: none; transition: color 0.2s; }
+        .toc ol li a:hover { color: var(--orange); }
+        .toc ol li::before { content: attr(data-n) ". "; color: var(--orange); font-weight: 700; font-size: 0.8rem; }
+        section { margin-bottom: 44px; }
+        section h2 {
+            font-family: 'Noto Serif KR', serif; font-size: 1.2rem; font-weight: 700; color: var(--dark);
+            margin-bottom: 16px; padding-left: 14px; border-left: 3px solid var(--orange);
+        }
+        section p { font-size: 0.95rem; color: var(--mid); margin-bottom: 12px; }
+        .highlight-box {
+            background: var(--orange-light); border-left: 4px solid var(--orange);
+            border-radius: 0 8px 8px 0; padding: 16px 20px; margin: 16px 0;
+            font-size: 0.9rem; color: var(--mid);
+        }
+        .highlight-box strong { color: var(--orange); }
+        .warn-box {
+            background: #fff8f0; border: 1px solid #ffd0a0; border-radius: 8px;
+            padding: 16px 20px; margin: 16px 0; font-size: 0.9rem; color: #a05000;
+        }
+        ul.styled { list-style: none; margin: 12px 0; }
+        ul.styled li {
+            font-size: 0.92rem; color: var(--mid); padding: 6px 0 6px 20px;
+            position: relative; border-bottom: 1px solid var(--border);
+        }
+        ul.styled li:last-child { border-bottom: none; }
+        ul.styled li::before { content: "▸"; color: var(--orange); position: absolute; left: 0; }
+        .article-box {
+            background: #fff; border: 1px solid var(--border); border-radius: 10px;
+            padding: 20px 24px; margin: 16px 0;
+        }
+        .article-box .article-num { font-size: 0.8rem; color: var(--orange); font-weight: 700; margin-bottom: 6px; }
+        .article-box p { font-size: 0.9rem; color: var(--mid); margin-bottom: 0; }
+        footer {
+            text-align: center; padding: 32px; font-size: 0.82rem; color: var(--light);
+            border-top: 1px solid var(--border);
+        }
+        @media (max-width: 600px) {
+            .toc ol { grid-template-columns: 1fr; }
+            .doc-header h1 { font-size: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <span class="logo">MenuLens 🔍</span>
+    <span class="doc-title">Terms of Service</span>
+</header>
+
+<div class="container">
+    <div class="doc-header">
+        <div class="badge">Legal Document</div>
+        <h1>Terms of Service</h1>
+        <div class="doc-meta">
+            <span>📅 Effective Date: January 1, 2025</span>
+            <span>🔄 Last Updated: January 1, 2025</span>
+            <span>📋 Version: v1.0</span>
+        </div>
+    </div>
+
+    <div class="toc">
+        <h3>Table of Contents</h3>
+        <ol>
+            <li data-n="1"><a href="#t1">Purpose & Definitions</a></li>
+            <li data-n="2"><a href="#t2">Effect of Terms</a></li>
+            <li data-n="3"><a href="#t3">Use of Service</a></li>
+            <li data-n="4"><a href="#t4">User Obligations</a></li>
+            <li data-n="5"><a href="#t5">AI Analysis Service</a></li>
+            <li data-n="6"><a href="#t6">Uploaded Content</a></li>
+            <li data-n="7"><a href="#t7">Service Restrictions</a></li>
+            <li data-n="8"><a href="#t8">Disclaimers</a></li>
+            <li data-n="9"><a href="#t9">Account Deletion</a></li>
+            <li data-n="10"><a href="#t10">Governing Law & Disputes</a></li>
+        </ol>
+    </div>
+
+    <section id="t1">
+        <h2>Article 1 – Purpose & Definitions</h2>
+        <p>These Terms govern the conditions and procedures for using the AI menu translation and analysis service provided by MenuLens (the "Service"), and define the rights and obligations between MenuLens and its users.</p>
+        <ul class="styled">
+            <li><strong>"Service"</strong>: The AI menu analysis and translation service provided by MenuLens in its entirety</li>
+            <li><strong>"User"</strong>: Any person who agrees to these Terms and uses the Service</li>
+            <li><strong>"Content"</strong>: Any images, text, or other material uploaded by a User while using the Service</li>
+        </ul>
+    </section>
+
+    <section id="t2">
+        <h2>Article 2 – Effect and Amendment of Terms</h2>
+        <p>These Terms take effect when posted on the Service or otherwise communicated to Users.</p>
+        <ul class="styled">
+            <li>By completing Google Sign-In and the consent screen, Users are deemed to have agreed to these Terms.</li>
+            <li>Users will be notified of any changes at least 7 days in advance. Continued use of the Service constitutes acceptance of the updated Terms.</li>
+            <li>Users who do not agree to updated Terms may stop using the Service and delete their account.</li>
+        </ul>
+    </section>
+
+    <section id="t3">
+        <h2>Article 3 – Use of Service</h2>
+        <p>The Service provides the following features to Users signed in with a Google account.</p>
+        <ul class="styled">
+            <li>Upload menu images via camera or photo library</li>
+            <li>AI-powered menu analysis, description, and translation</li>
+            <li>Submit feedback for service improvement</li>
+        </ul>
+        <div class="highlight-box">
+            <strong>📌 Service Conditions:</strong> Service terms (e.g., free daily usage limits) are subject to change with prior notice.
+        </div>
+    </section>
+
+    <section id="t4">
+        <h2>Article 4 – User Obligations</h2>
+        <p>Users must not engage in any of the following activities.</p>
+        <ul class="styled">
+            <li>Impersonating others or submitting false information</li>
+            <li>Uploading images unrelated to menus (e.g., personal photos, ID cards, or images containing sensitive information)</li>
+            <li>Using the Service commercially without authorization or scraping/crawling the Service</li>
+            <li>Interfering with the normal operation of the Service</li>
+            <li>Any conduct that violates applicable laws or public order</li>
+        </ul>
+    </section>
+
+    <section id="t5">
+        <h2>Article 5 – AI Analysis Service</h2>
+        <p>AI menu analysis results are generated via the Google Gemini API. Please note the following.</p>
+        <div class="warn-box">
+            ⚠️ AI analysis results are for <strong>reference only</strong> and may differ from the actual restaurant menu. Always verify critical information such as allergens, ingredients, and prices directly with the restaurant.
+        </div>
+        <ul class="styled">
+            <li>The accuracy of AI analysis results is not guaranteed.</li>
+            <li>MenuLens is not liable for any damages resulting from AI analysis results.</li>
+            <li>Uploaded images are transmitted to Google Gemini API servers.</li>
+        </ul>
+    </section>
+
+    <section id="t6">
+        <h2>Article 6 – Uploaded Content & Data Use</h2>
+        <p>The following rights and obligations apply to images uploaded by Users.</p>
+        <ul class="styled">
+            <li>Users retain all rights and responsibilities for the images they upload.</li>
+            <li>Uploaded <strong>menu images may be used for service improvement and AI model training</strong>.</li>
+            <li>When used for AI training, <strong>all personal identifiers — including email and UID — are removed</strong>.</li>
+            <li>Please avoid uploading images that contain personal information (e.g., receipts, ID cards).</li>
+        </ul>
+    </section>
+
+    <section id="t7">
+        <h2>Article 7 – Service Restrictions</h2>
+        <p>Access to the Service may be restricted without prior notice in the following cases.</p>
+        <ul class="styled">
+            <li>Violation of these Terms</li>
+            <li>Interference with the normal operation of the Service</li>
+            <li>Use of the Service for illegal or unethical purposes</li>
+        </ul>
+    </section>
+
+    <section id="t8">
+        <h2>Article 8 – Disclaimers</h2>
+        <ul class="styled">
+            <li>MenuLens is not liable for service interruptions caused by natural disasters, scheduled maintenance, or system failures.</li>
+            <li>Users are solely responsible for the content of images they upload.</li>
+            <li>MenuLens is not liable for damages arising from errors in AI analysis results.</li>
+            <li>MenuLens is not liable for issues caused by third-party service failures (e.g., Google).</li>
+        </ul>
+    </section>
+
+    <section id="t9">
+        <h2>Article 9 – Account Deletion & Data Handling</h2>
+        <p>Users may delete their account at any time through the in-app deletion feature. Data handling upon deletion follows the Privacy Policy.</p>
+        <ul class="styled">
+            <li>The Google account link is removed and account information is deleted upon account deletion.</li>
+            <li>Uploaded menu images are anonymized and retained for AI training purposes.</li>
+            <li>Submitted feedback is retained for service improvement purposes with author information removed.</li>
+        </ul>
+    </section>
+
+    <section id="t10">
+        <h2>Article 10 – Governing Law & Dispute Resolution</h2>
+        <p>These Terms are governed by applicable law. Any disputes arising in connection with the Service shall be resolved through the courts of competent jurisdiction.</p>
+        <p>For inquiries related to the Service, please contact us at: <strong style="color: var(--orange);">your-email@example.com</strong></p>
+    </section>
+</div>
+
+<footer>
+    © 2025 MenuLens · Terms of Service · <a href="privacy-policy.html" style="color: #FF7300; text-decoration: none;">Privacy Policy</a>
+</footer>
+
+</body>
+</html>
