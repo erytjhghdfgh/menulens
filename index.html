@@ -93,7 +93,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, deleteUser, reauthenticateWithPopup } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, deleteUser, reauthenticateWithRedirect, getRedirectResult } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
         import { getFirestore, collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 
@@ -126,7 +126,37 @@ window.auth = auth;
                 console.error("Login failed:", error);
             }
         };
+// ✅ 재인증 리디렉션 후 돌아왔을 때 처리
+getRedirectResult(auth).then(async (result) => {
+    if (!result) return; // 일반 로딩이면 무시
+    
+    const t = getT();
+    const user = auth.currentUser;
+    if (!user) return;
 
+    try {
+        // 개인정보 익명화
+        const menuQuery = query(collection(db, "valid_menus"), where("uid", "==", user.uid));
+        const menuSnapshot = await getDocs(menuQuery);
+        await Promise.all(menuSnapshot.docs.map(d =>
+            updateDoc(doc(db, "valid_menus", d.id), { uid: null, userEmail: null })
+        ));
+
+        const feedbackQuery = query(collection(db, "feedbacks"), where("user", "==", user.email));
+        const feedbackSnapshot = await getDocs(feedbackQuery);
+        await Promise.all(feedbackSnapshot.docs.map(d =>
+            updateDoc(doc(db, "feedbacks", d.id), { user: null })
+        ));
+
+        await deleteUser(user);
+        alert(t.alertWithdrawSuccess);
+        window.location.reload();
+    } catch (error) {
+        console.error("Account deletion failed:", error);
+        alert(t.alertWithdrawFail);
+    }
+}).catch(console.error);
+        
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 window.isUserLoggedIn = true;
@@ -207,41 +237,22 @@ document.getElementById('feedbackImgPreview').innerHTML = '';
             }
         };
 
-        document.getElementById('btnWithdraw').addEventListener('click', async () => {
-            const t = getT();
-            const user = auth.currentUser;
-            if (!user) return;
+document.getElementById('btnWithdraw').addEventListener('click', async () => {
+    const t = getT();
+    const user = auth.currentUser;
+    if (!user) return;
 
-            if (confirm(t.alertWithdrawConfirm)) {
-                try {
-                    await reauthenticateWithPopup(user, provider);
-
-                    const menuQuery = query(collection(db, "valid_menus"), where("uid", "==", user.uid));
-                    const menuSnapshot = await getDocs(menuQuery);
-                    await Promise.all(menuSnapshot.docs.map(d =>
-                        updateDoc(doc(db, "valid_menus", d.id), { uid: null, userEmail: null })
-                    ));
-
-                    const feedbackQuery = query(collection(db, "feedbacks"), where("user", "==", user.email));
-                    const feedbackSnapshot = await getDocs(feedbackQuery);
-                    await Promise.all(feedbackSnapshot.docs.map(d =>
-                        updateDoc(doc(db, "feedbacks", d.id), { user: null })
-                    ));
-
-                    await deleteUser(user);
-                    alert(t.alertWithdrawSuccess);
-                    window.location.reload();
-
-                } catch (error) {
-                    console.error("Account deletion failed:", error);
-                    if (error.code === 'auth/popup-closed-by-user') {
-                        alert(t.alertReopenWindow);
-                    } else {
-                        alert(t.alertWithdrawFail);
-                    }
-                }
-            }
-        });
+    if (confirm(t.alertWithdrawConfirm)) {
+        try {
+            // ✅ 리디렉션 방식으로 재인증 (팝업 대신)
+            await reauthenticateWithRedirect(user, provider);
+            // 여기서 페이지가 이동됨 → 돌아오면 아래 코드 실행
+        } catch (error) {
+            console.error("Account deletion failed:", error);
+            alert(t.alertWithdrawFail);
+        }
+    }
+});
 
         window.saveValidMenuToFirebase = async function(file, aiResultText) {
             if (!window.isUserLoggedIn || !auth.currentUser) return;
