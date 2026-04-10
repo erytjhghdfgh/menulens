@@ -249,6 +249,7 @@ function stopLoading() {
     setTimeout(() => { loading.style.display = 'none'; }, 300);
 }
 
+
 function _loadTick(ts) {
     if (!_stageStart) _stageStart = ts;
     const stage = stages[_stageIdx];
@@ -387,7 +388,6 @@ Return JSON with status "error" and errorMessage: "The photo is too blurry to re
     try {
 
 
-// ✅ 수정 - currentUser 준비될 때까지 최대 3초 대기
 if (!window.auth) {
     throw new Error(t.alertLoginRequired);
 }
