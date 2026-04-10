@@ -124,7 +124,7 @@ function buildConsentModal() {
                 <label style="display:flex; align-items:center; gap:12px;
                        background:#fafafa; border:1px solid #e8e8e8; border-radius:10px;
                        padding:12px 14px; cursor:pointer;">
-                    <input type="checfeedbackContainer.style.display kbox" id="agreeAI" style="width:18px; height:18px; accent-color:#FF7300; cursor:pointer;">
+                    <input type="checkbox" id="agreeAI" style="width:18px; height:18px; accent-color:#FF7300; cursor:pointer;">
                     <div style="flex:1;">
                         <div style="font-size:0.88rem; font-weight:600; color:#333; margin-bottom:3px;">
                             <span style="color:#888; font-size:0.75rem; font-weight:700;
