@@ -514,7 +514,6 @@ htmlContent += `
 
     } catch (error) {
         console.error("JSON 파싱 에러:", error);
-        console.log("AI 원본 응답:", data);
         resultContainer.innerHTML = `
             <div class="markdown-body">
                 <p style="color: red;">${t.alertAnalyzeError}</p>
