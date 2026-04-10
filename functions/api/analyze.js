@@ -6,7 +6,7 @@ export async function onRequestPost(context) {
 
   const body = await request.arrayBuffer();
 if (body.byteLength > 4 * 1024 * 1024) {
-  return new Response(JSON.stringify({ error: { message: '이미지가 너무 큽니다.' } }), 
+  return new Response(JSON.stringify({ error: { message: 'Image size exceeds 4MB limit.' } }), 
     { status: 413 });
 }
   const requestBody = JSON.parse(new TextDecoder().decode(body)); // 기존 request.json() 대체
@@ -17,7 +17,7 @@ if (body.byteLength > 4 * 1024 * 1024) {
   const idToken = authHeader.replace('Bearer ', '').trim();
   if (!idToken) {
     return new Response(JSON.stringify({
-      error: { message: '로그인이 필요합니다.' }
+      error: { message: 'Login required.' }
     }), { status: 401, headers: { 'Content-Type': 'application/json' } });
   }
 
@@ -32,14 +32,14 @@ if (body.byteLength > 4 * 1024 * 1024) {
   );
 const verifyData = await verifyRes.json();
 if (!verifyRes.ok || !verifyData.users || verifyData.users.length === 0) {
-  return new Response(JSON.stringify({ error: { message: '유효하지 않은 사용자입니다.' } }), 
+  return new Response(JSON.stringify({ error: { message: 'Invalid user.' } }), 
     { status: 403, headers: { 'Content-Type': 'application/json' } });
 }
 
   // ✅ 기존 코드
   if (!apiKey) {
     return new Response(JSON.stringify({
-      error: { message: 'GEMINI_API_KEY가 없습니다.' }
+      error: { message: 'API key is missing.' }
     }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 
