@@ -3,12 +3,14 @@ export async function onRequestPost(context) {
   const apiKey = env.GEMINI_API_KEY;
 
   // ✅ 1단계: 요청 크기 제한 (4MB 초과 차단)
-  const contentLength = parseInt(request.headers.get('content-length') || '0');
-  if (contentLength > 4 * 1024 * 1024) {
-    return new Response(JSON.stringify({
-      error: { message: '이미지가 너무 큽니다.' }
-    }), { status: 413, headers: { 'Content-Type': 'application/json' } });
-  }
+
+  const body = await request.arrayBuffer();
+if (body.byteLength > 4 * 1024 * 1024) {
+  return new Response(JSON.stringify({ error: { message: '이미지가 너무 큽니다.' } }), 
+    { status: 413 });
+}
+  const requestBody = JSON.parse(new TextDecoder().decode(body)); // 기존 request.json() 대체
+
 
   // ✅ 2단계: 토큰 존재 여부 확인
   const authHeader = request.headers.get('Authorization') || '';
