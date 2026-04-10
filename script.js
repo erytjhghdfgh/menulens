@@ -317,13 +317,10 @@ galleryInput.addEventListener('change', handleImageSelection);
 // ============================================================
 // 🔑 로그인 체크
 // ============================================================
+
 // ✅ 수정
 function checkLoginAndAct(targetInputId) {
-    console.log('isUserLoggedIn:', window.isUserLoggedIn);
-    console.log('auth.currentUser:', window.auth?.currentUser);
-    
-    import { onAuthStateChanged } from "firebase/auth";
-    if (loggedIn) {
+    if (window.isUserLoggedIn) {
         document.getElementById(targetInputId).click();
     } else {
         alert(t.alertLoginRequired);
