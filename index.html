@@ -184,14 +184,13 @@ if (!text.trim() && files.length === 0) {
                     createdAt: serverTimestamp()
                 });
 
-                alert(t.feedbackDone);
-                document.getElementById('feedbackText').value = '';
-                fileInput.value = '';
-                document.getElementById('feedbackImgPreview').innerHTML = '';
-
-// 기존에 있던 feedbackHeaderText 내용만 교체
+document.getElementById('feedbackFormArea').style.display = 'none';
+document.getElementById('btnToggleFeedback').style.display = 'none';
 document.getElementById('feedbackHeaderText').innerHTML =
     `<span style="color:#888;">${t.feedbackSent}</span>`;
+document.getElementById('feedbackText').value = '';
+fileInput.value = '';
+document.getElementById('feedbackImgPreview').innerHTML = '';
             } catch (error) {
                 console.error("Feedback submission error:", error);
                 alert(getT().alertFeedbackFail);
