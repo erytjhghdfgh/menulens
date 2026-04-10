@@ -44,7 +44,7 @@ if (!verifyRes.ok || !verifyData.users || verifyData.users.length === 0) {
   }
 
   try {
-    const requestBody = await request.json();
+    
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
     const response = await fetch(url, {
       method: 'POST',
