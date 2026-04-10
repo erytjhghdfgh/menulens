@@ -451,6 +451,14 @@ function renderStoryMode(data) {  // 이미 파싱된 객체 받음
     document.getElementById('feedbackFormArea').style.display = 'none';
     document.getElementById('feedbackHeaderText').innerHTML = t.feedbackHeader;
 
+
+    const feedbackBtn = document.getElementById('btnSubmitFeedback');
+    feedbackBtn.disabled = false;
+    feedbackBtn.textContent = t.feedbackSend;
+    document.getElementById('feedbackText').value = '';
+    document.getElementById('feedbackImgPreview').innerHTML = '';
+    document.getElementById('feedbackImgInput').value = '';
+
     try {
         if (!data) throw new Error("파싱 실패");
         
