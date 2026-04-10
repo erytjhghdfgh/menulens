@@ -297,7 +297,11 @@ if (preview) {
     resultContainer.innerHTML = '';
     resultContainer.style.display = 'none';
     disclaimer.style.display = 'none';
-    feedbackContainer.style.display = 'none';
+    document.getElementById('feedbackFormArea').style.display = 'none';
+document.getElementById('btnToggleFeedback').style.display = '';
+document.getElementById('feedbackHeaderText').innerHTML = t.feedbackHeader;
+document.getElementById('feedbackText').value = '';
+document.getElementById('feedbackImgPreview').innerHTML = '';
 
     startLoading();
 
