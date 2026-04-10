@@ -440,6 +440,10 @@ function renderStoryMode(data) {  // 이미 파싱된 객체 받음
     resultContainer.style.display = 'block';
     feedbackContainer.style.display = 'block';
 
+        document.getElementById('btnToggleFeedback').style.display = 'block';
+    document.getElementById('feedbackFormArea').style.display = 'none';
+    document.getElementById('feedbackHeaderText').innerHTML = t.feedbackHeader;
+
     try {
         if (!data) throw new Error("파싱 실패");
         
