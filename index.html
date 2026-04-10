@@ -93,7 +93,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
-        import { getAuth, signInWithRedirect, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, deleteUser, reauthenticateWithRedirect, getRedirectResult } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, deleteUser, reauthenticateWithPopup } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
         import { getFirestore, collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 
@@ -118,51 +118,14 @@ window.auth = auth;
             const lang = (navigator.language || 'en').split('-')[0];
             return uiTranslations[lang] || uiTranslations['en'];
         }
-window.triggerGoogleLogin = async function() {
+
+        window.triggerGoogleLogin = async function() {
     try {
-        await signInWithRedirect(auth, provider);
+        await signInWithPopup(auth, provider);
     } catch (error) {
         console.error("Login failed:", error);
     }
 };
-
-
-getRedirectResult(auth).then(async (result) => {
-    if (!result) return;
-
-    const t = getT();
-
-    // ✅ 회원탈퇴 리디렉션인지 확인 (sessionStorage로 구분)
-    const isWithdrawing = sessionStorage.getItem('withdrawing') === 'true';
-
-    if (isWithdrawing) {
-        sessionStorage.removeItem('withdrawing');
-        const user = auth.currentUser;
-        if (!user) return;
-
-        try {
-            const menuQuery = query(collection(db, "valid_menus"), where("uid", "==", user.uid));
-            const menuSnapshot = await getDocs(menuQuery);
-            await Promise.all(menuSnapshot.docs.map(d =>
-                updateDoc(doc(db, "valid_menus", d.id), { uid: null, userEmail: null })
-            ));
-
-            const feedbackQuery = query(collection(db, "feedbacks"), where("user", "==", user.email));
-            const feedbackSnapshot = await getDocs(feedbackQuery);
-            await Promise.all(feedbackSnapshot.docs.map(d =>
-                updateDoc(doc(db, "feedbacks", d.id), { user: null })
-            ));
-
-            await deleteUser(user);
-            alert(t.alertWithdrawSuccess);
-            window.location.reload();
-        } catch (error) {
-            console.error("Account deletion failed:", error);
-            alert(t.alertWithdrawFail);
-        }
-    }
-    // 일반 로그인 리디렉션이면 onAuthStateChanged가 자동 처리
-}).catch(console.error);
         
         onAuthStateChanged(auth, (user) => {
             if (user) {
@@ -244,19 +207,37 @@ document.getElementById('feedbackImgPreview').innerHTML = '';
             }
         };
 
-      document.getElementById('btnWithdraw').addEventListener('click', async () => {
+document.getElementById('btnWithdraw').addEventListener('click', async () => {
     const t = getT();
     const user = auth.currentUser;
     if (!user) return;
 
     if (confirm(t.alertWithdrawConfirm)) {
         try {
-            sessionStorage.setItem('withdrawing', 'true'); // ✅ 탈퇴 중 표시
-            await reauthenticateWithRedirect(user, provider);
+            await reauthenticateWithPopup(user, provider);
+
+            const menuQuery = query(collection(db, "valid_menus"), where("uid", "==", user.uid));
+            const menuSnapshot = await getDocs(menuQuery);
+            await Promise.all(menuSnapshot.docs.map(d =>
+                updateDoc(doc(db, "valid_menus", d.id), { uid: null, userEmail: null })
+            ));
+
+            const feedbackQuery = query(collection(db, "feedbacks"), where("user", "==", user.email));
+            const feedbackSnapshot = await getDocs(feedbackQuery);
+            await Promise.all(feedbackSnapshot.docs.map(d =>
+                updateDoc(doc(db, "feedbacks", d.id), { user: null })
+            ));
+
+            await deleteUser(user);
+            alert(t.alertWithdrawSuccess);
+            window.location.reload();
         } catch (error) {
-            sessionStorage.removeItem('withdrawing');
             console.error("Account deletion failed:", error);
-            alert(t.alertWithdrawFail);
+            if (error.code === 'auth/popup-closed-by-user') {
+                alert(t.alertReopenWindow);
+            } else {
+                alert(t.alertWithdrawFail);
+            }
         }
     }
 });
