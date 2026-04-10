@@ -29,7 +29,7 @@ export async function onRequestPost(context) {
   const body = await request.arrayBuffer();
   if (body.byteLength > 4 * 1024 * 1024) {
     return new Response(JSON.stringify({ error: { message: 'Image size exceeds 4MB limit.' } }), 
-      { status: 'application/json' } });
+     { status: 413, headers: { 'Content-Type': 'application/json' } });
   }
   let requestBody;
 try {
