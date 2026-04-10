@@ -138,6 +138,13 @@ window.auth = auth;
                 window.isUserLoggedIn = false;
                 document.getElementById('loggedInView').style.display = 'none';
                 document.getElementById('loggedOutView').style.display = 'block';
+                    document.getElementById('preview').style.display = 'none';
+    document.getElementById('preview').src = '';
+    document.getElementById('resultContainer').innerHTML = '';
+    document.getElementById('resultContainer').style.display = 'none';
+    document.getElementById('disclaimer').style.display = 'none';
+    document.getElementById('feedbackContainer').style.display = 'none';
+    document.getElementById('loading').style.display = 'none';
             }
         });
 
