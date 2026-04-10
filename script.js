@@ -322,7 +322,7 @@ function checkLoginAndAct(targetInputId) {
     console.log('isUserLoggedIn:', window.isUserLoggedIn);
     console.log('auth.currentUser:', window.auth?.currentUser);
     
-    const loggedIn = window.isUserLoggedIn || (window.auth && window.auth.currentUser);
+    import { onAuthStateChanged } from "firebase/auth";
     if (loggedIn) {
         document.getElementById(targetInputId).click();
     } else {
