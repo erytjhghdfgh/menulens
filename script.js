@@ -200,11 +200,18 @@ function updateConsentButton() {
     btn.style.pointerEvents = required ? 'auto' : 'none';
 }
 
-// 구글 로그인 버튼 클릭 → 모달 표시 + 동적 생성
+// 기존 코드 (549~553줄) → 아래로 교체
 document.getElementById('btnGoogleLogin').addEventListener('click', () => {
-    buildConsentModal(); // 매번 최신 번역으로 모달 생성
+    // ✅ 이미 동의한 경우 바로 로그인
+    if (localStorage.getItem('menulens_agreed_terms') === 'true') {
+        window.triggerGoogleLogin();
+        return;
+    }
+    // 동의 안 한 경우만 모달 표시
+    buildConsentModal();
     document.getElementById('consentModal').style.display = 'flex';
 });
+
 
 function cleanJsonString(str) {
     return str.replace(/```json\n?|```\n?/g, '').trim();
