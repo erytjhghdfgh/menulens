@@ -2,6 +2,6 @@
   "name": "menulens",
   "version": "1.0.0",
   "dependencies": {
-    "jose": "^5.0.0"
+    "jose": "^6.0.0"
   }
 }
