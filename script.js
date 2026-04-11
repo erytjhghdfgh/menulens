@@ -294,7 +294,7 @@ async function checkLoginAndAct(targetInputId) {
     if (window.isUserLoggedIn) {
         document.getElementById(targetInputId).click();
     } else {
-        alert(t.alertLoginRequired);
+        
         document.getElementById('authContainer').scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 }
@@ -395,7 +395,13 @@ function renderStoryMode(data) {
         }
 
         htmlContent += `<hr>`;
-
+        if (data.restaurantNotices && data.restaurantNotices.length > 0) {
+            htmlContent += `<div class="restaurant-notices">`;
+            data.restaurantNotices.forEach(notice => {
+                htmlContent += `<p>📢 ${esc(notice)}</p>`;
+            });
+            htmlContent += `</div>`;
+        }
         if (data.categories && data.categories.length > 0) {
             data.categories.forEach(category => {
                 htmlContent += `<h3>${esc(category.categoryName)}</h3>`;
