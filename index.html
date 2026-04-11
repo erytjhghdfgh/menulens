@@ -234,7 +234,9 @@ onAuthStateChanged(auth, async (user) => { // async 추가됨
             try {
                 const uploadedUrls = [];
                 for (const file of files) {
-                    const storageRef = ref(storage, 'feedbacks/' + Date.now() + "_" + file.name);
+                    const ext = file.name.split('.').pop().replace(/[^a-zA-Z0-9]/g, '') || 'jpg';
+                    const safeFileName = Date.now() + '_' + crypto.randomUUID() + '.' + ext;
+                    const storageRef = ref(storage, 'feedbacks/' + safeFileName);
                     const snapshot = await uploadBytes(storageRef, file);
                     const url = await getDownloadURL(snapshot.ref);
                     uploadedUrls.push(url);
@@ -306,8 +308,9 @@ document.getElementById('btnWithdraw').addEventListener('click', async () => {
         window.saveValidMenuToFirebase = async function(file, aiResultText) {
             if (!window.isUserLoggedIn || !auth.currentUser) return;
             try {
-                const storageRef = ref(storage, 'valid_menus/' + auth.currentUser.uid + '_' + Date.now() + "_" + file.name);
-                const snapshot = await uploadBytes(storageRef, file);
+                const safeFileName = auth.currentUser.uid + '_' + Date.now() + '_' + crypto.randomUUID() + '.webp';
+                const storageRef = ref(storage, 'valid_menus/' + safeFileName);
+                const snapshot = await uploadBytes(storageRef, file); // file 자리엔 이미 compressedBlob이 전달됨
                 const imageUrl = await getDownloadURL(snapshot.ref);
                 await addDoc(collection(db, "valid_menus"), {
                     imageUrl: imageUrl,
