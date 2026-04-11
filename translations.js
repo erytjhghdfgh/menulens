@@ -9,7 +9,7 @@ const uiTranslations = {
         title: "MenuLens 🔍",
         slogan: "메뉴판을 카메라로 찍으면 정보를 알려드립니다.",
         // 버튼
-        btn: "카메라로 찍기",
+        btn: "사진 촬영하기",
         btnUpload: "사진 불러오기",
         // 상태
         loading: "AI가 메뉴를 분석하고 있어요... ",
