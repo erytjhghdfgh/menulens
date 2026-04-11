@@ -232,6 +232,13 @@ function compressImage(file) {
         img.src = url;
     });
 }
+function startLoading() {
+    loading.style.display = 'flex';
+}
+
+function stopLoading() {
+    loading.style.display = 'none';
+}
 
 // ============================================================
 // 📷 이미지 선택 처리
@@ -260,14 +267,6 @@ function handleImageSelection(event) {
     resultContainer.style.display = 'none';
     disclaimer.style.display = 'none';
     feedbackContainer.style.display = 'none'; 
-
-    function startLoading() {
-    loading.style.display = 'flex';
-}
-
-function stopLoading() {
-    loading.style.display = 'none';
-}
     startLoading();
 
 // 수정 후
