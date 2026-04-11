@@ -16,10 +16,9 @@
     <div id="authContainer" class="auth-container">
         <div id="loggedOutView" class="auth-view">
             <p id="loginPromo">🎁 Sign in with Google to start your <strong>1-day free trial</strong>!</p>
-<button id="btnGoogleLogin" class="google-login-btn">
-    <img src="google-signin-btn.svg" alt="Continue with Google" class="google-signin-img">
-    
-</button>
+            <button id="btnGoogleLogin" class="google-login-btn">
+                <img src="google-signin-btn.svg" alt="Continue with Google" class="google-signin-img">
+            </button>
         </div>
 
         <div id="loggedInView" class="auth-view" style="display: none;">
@@ -67,7 +66,7 @@
             </div>
         </div>
     </div>
-    </div>
+  </div>
 
     <div class="bottom-sticky-bar">
         <div class="action-buttons">
@@ -94,7 +93,8 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, deleteUser, reauthenticateWithPopup } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
-        import { getFirestore, collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+        // ✅ getDoc, setDoc 추가됨
+        import { getFirestore, collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 
         const firebaseConfig = {
@@ -108,8 +108,8 @@
         };
 
         const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-window.auth = auth;
+        const auth = getAuth(app);
+        window.auth = auth;
         const db = getFirestore(app);
         const storage = getStorage(app);
         const provider = new GoogleAuthProvider();
@@ -119,14 +119,49 @@ window.auth = auth;
             return uiTranslations[lang] || uiTranslations['en'];
         }
 
+        // ✅ 로그인 흐름 완벽 수정 (DB 우선 확인)
         window.triggerGoogleLogin = async function() {
-    try {
-        await signInWithPopup(auth, provider);
-    } catch (error) {
-        console.error("Login failed:", error);
-    }
-};
-        
+            try {
+                const result = await signInWithPopup(auth, provider);
+                const user = result.user;
+
+                const userDocRef = doc(db, "users", user.uid);
+                const userDocSnap = await getDoc(userDocRef);
+
+                if (userDocSnap.exists() && userDocSnap.data().agreedTerms === true) {
+                    console.log("기존 유저 로그인 완료 - 모달 패스");
+                } else {
+                    if (typeof buildConsentModal === 'function') buildConsentModal();
+                    document.getElementById('consentModal').style.display = 'flex';
+                }
+            } catch (error) {
+                console.error("Login failed:", error);
+            }
+        };
+
+        // ✅ 로그인 버튼 누르면 즉시 구글 팝업 띄우기
+        document.getElementById('btnGoogleLogin').addEventListener('click', () => {
+            window.triggerGoogleLogin();
+        });
+
+        // ✅ 모달에서 동의 완료 시 DB에 저장하는 외부 함수 (script.js에서 호출)
+        window.saveUserConsent = async function(agreedAI) {
+            const user = auth.currentUser;
+            if (user) {
+                await setDoc(doc(db, "users", user.uid), {
+                    email: user.email,
+                    agreedTerms: true,
+                    consentAiLearning: agreedAI,
+                    lastLogin: serverTimestamp()
+                }, { merge: true });
+            }
+        };
+
+        // ✅ 모달에서 취소 시 로그아웃
+        window.cancelConsentAndLogout = async function() {
+            await signOut(auth);
+        };
+
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 window.isUserLoggedIn = true;
@@ -138,13 +173,13 @@ window.auth = auth;
                 window.isUserLoggedIn = false;
                 document.getElementById('loggedInView').style.display = 'none';
                 document.getElementById('loggedOutView').style.display = 'block';
-                    document.getElementById('preview').style.display = 'none';
-    document.getElementById('preview').src = '';
-    document.getElementById('resultContainer').innerHTML = '';
-    document.getElementById('resultContainer').style.display = 'none';
-    document.getElementById('disclaimer').style.display = 'none';
-    document.getElementById('feedbackContainer').style.display = 'none';
-    document.getElementById('loading').style.display = 'none';
+                document.getElementById('preview').style.display = 'none';
+                document.getElementById('preview').src = '';
+                document.getElementById('resultContainer').innerHTML = '';
+                document.getElementById('resultContainer').style.display = 'none';
+                document.getElementById('disclaimer').style.display = 'none';
+                document.getElementById('feedbackContainer').style.display = 'none';
+                document.getElementById('loading').style.display = 'none';
             }
         });
 
@@ -159,22 +194,22 @@ window.auth = auth;
             const files = fileInput.files;
             const btn = document.getElementById('btnSubmitFeedback');
 
-                // ✅ 중복 클릭 방지: 이미 전송 중이면 무시
-    if (btn.disabled) return;
-    btn.disabled = true;
-    btn.textContent = t.feedbackSending || 'Sending...'; // 전송 중 표시
-if (!window.isUserLoggedIn) {
-    alert(t.alertLoginForFeedback);
-    btn.disabled = false;
-    btn.textContent = t.feedbackSend;
-    return;
-}
-if (!text.trim() && files.length === 0) {
-    alert(t.alertFeedbackEmpty);
-    btn.disabled = false;
-    btn.textContent = t.feedbackSend;
-    return;
-}
+            if (btn.disabled) return;
+            btn.disabled = true;
+            btn.textContent = t.feedbackSending || 'Sending...'; 
+
+            if (!window.isUserLoggedIn) {
+                alert(t.alertLoginForFeedback);
+                btn.disabled = false;
+                btn.textContent = t.feedbackSend;
+                return;
+            }
+            if (!text.trim() && files.length === 0) {
+                alert(t.alertFeedbackEmpty);
+                btn.disabled = false;
+                btn.textContent = t.feedbackSend;
+                return;
+            }
             try {
                 const uploadedUrls = [];
                 for (const file of files) {
@@ -190,57 +225,56 @@ if (!text.trim() && files.length === 0) {
                     user: auth.currentUser.email,
                     createdAt: serverTimestamp()
                 });
-
-document.getElementById('feedbackFormArea').style.display = 'none';
-document.getElementById('btnToggleFeedback').style.display = 'none';
-document.getElementById('feedbackHeaderText').innerHTML =
-    `<span style="color:#888;">${t.feedbackSent}</span>`;
-document.getElementById('feedbackText').value = '';
-fileInput.value = '';
-document.getElementById('feedbackImgPreview').innerHTML = '';
+                document.getElementById('feedbackFormArea').style.display = 'none';
+                document.getElementById('btnToggleFeedback').style.display = 'none';
+                document.getElementById('feedbackHeaderText').innerHTML =
+                    `<span style="color:#888;">${t.feedbackSent}</span>`;
+                document.getElementById('feedbackText').value = '';
+                fileInput.value = '';
+                document.getElementById('feedbackImgPreview').innerHTML = '';
             } catch (error) {
                 console.error("Feedback submission error:", error);
                 alert(getT().alertFeedbackFail);
-                        // ✅ 실패 시에는 버튼 다시 활성화 (재시도 가능하게)
-        btn.disabled = false;
-        btn.textContent = t.feedbackSend;
+                btn.disabled = false;
+                btn.textContent = t.feedbackSend;
             }
         };
 
-document.getElementById('btnWithdraw').addEventListener('click', async () => {
-    const t = getT();
-    const user = auth.currentUser;
-    if (!user) return;
+        document.getElementById('btnWithdraw').addEventListener('click', async () => {
+            const t = getT();
+            const user = auth.currentUser;
+            if (!user) return;
 
-    if (confirm(t.alertWithdrawConfirm)) {
-        try {
-            await reauthenticateWithPopup(user, provider);
+            if (confirm(t.alertWithdrawConfirm)) {
+                try {
+                    await reauthenticateWithPopup(user, provider);
 
-            const menuQuery = query(collection(db, "valid_menus"), where("uid", "==", user.uid));
-            const menuSnapshot = await getDocs(menuQuery);
-            await Promise.all(menuSnapshot.docs.map(d =>
-                updateDoc(doc(db, "valid_menus", d.id), { uid: null, userEmail: null })
-            ));
+                    const menuQuery = query(collection(db, "valid_menus"), where("uid", "==", user.uid));
+                    const menuSnapshot = await getDocs(menuQuery);
+                    
+                    await Promise.all(menuSnapshot.docs.map(d =>
+                        updateDoc(doc(db, "valid_menus", d.id), { uid: null, userEmail: null })
+                    ));
 
-            const feedbackQuery = query(collection(db, "feedbacks"), where("user", "==", user.email));
-            const feedbackSnapshot = await getDocs(feedbackQuery);
-            await Promise.all(feedbackSnapshot.docs.map(d =>
-                updateDoc(doc(db, "feedbacks", d.id), { user: null })
-            ));
+                    const feedbackQuery = query(collection(db, "feedbacks"), where("user", "==", user.email));
+                    const feedbackSnapshot = await getDocs(feedbackQuery);
+                    await Promise.all(feedbackSnapshot.docs.map(d =>
+                        updateDoc(doc(db, "feedbacks", d.id), { user: null })
+                    ));
 
-            await deleteUser(user);
-            alert(t.alertWithdrawSuccess);
-            window.location.reload();
-        } catch (error) {
-            console.error("Account deletion failed:", error);
-            if (error.code === 'auth/popup-closed-by-user') {
-                alert(t.alertReopenWindow);
-            } else {
-                alert(t.alertWithdrawFail);
+                    await deleteUser(user);
+                    alert(t.alertWithdrawSuccess);
+                    window.location.reload();
+                } catch (error) {
+                    console.error("Account deletion failed:", error);
+                    if (error.code === 'auth/popup-closed-by-user') {
+                        alert(t.alertReopenWindow);
+                    } else {
+                        alert(t.alertWithdrawFail);
+                    }
+                }
             }
-        }
-    }
-});
+        });
 
         window.saveValidMenuToFirebase = async function(file, aiResultText) {
             if (!window.isUserLoggedIn || !auth.currentUser) return;
@@ -254,18 +288,16 @@ document.getElementById('btnWithdraw').addEventListener('click', async () => {
                     uid: auth.currentUser.uid,
                     createdAt: serverTimestamp(),
                     aiResult: (() => {
-    try { return JSON.parse(aiResultText); }
-    catch { return aiResultText || null; }
-})()
+                        try { return JSON.parse(aiResultText); }
+                        catch { return aiResultText || null; }
+                    })()
                 });
-                
             } catch (error) {
                 console.error("🚨 Failed to save menu photo:", error);
                 if (typeof stopLoading === 'function') stopLoading();
             }
         };
 
-        // ✅ Firebase 초기화 완료 후 script.js 로드
         const _s = document.createElement('script');
         _s.src = 'script.js';
         document.body.appendChild(_s);
