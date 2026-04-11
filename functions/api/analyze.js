@@ -184,7 +184,7 @@ Return EXACTLY this JSON: {"status": "error", "errorCode": "BLURRY_IMAGE", "rest
     }],
     generationConfig: {
       responseMimeType: "application/json",
-      maxOutputTokens: 8192
+      maxOutputTokens: 8192,
       thinkingConfig: { thinkingBudget: 0 }
     }
   };
