@@ -401,9 +401,12 @@ function renderStoryMode(data) {
                 htmlContent += `<h3>${esc(category.categoryName)}</h3>`;
 
                 category.items.forEach(item => {
-                    const pricesHtml = item.prices.map(price => 
-                        `<span class="dish-price">${esc(price)}</span>`
-                    ).join('');
+                    const pricesHtml = item.prices.map(p => {
+                        const labelHtml = p.label
+                            ? `<span class="price-label">${esc(p.label)}</span> `
+                            : '';
+                        return `<span class="dish-price">${labelHtml}${esc(p.price)}</span>`;
+                    }).join('');
 
                     const descHtml = item.description 
                         ? `<p class="dish-desc">${esc(item.description)}</p>`
