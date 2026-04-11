@@ -267,6 +267,8 @@ function handleImageSelection(event) {
         event.target.value = '';
         return;
     }
+    const mockup = document.getElementById('videoMockup');
+    if (mockup) mockup.style.display = 'none';
 
 if (preview) {
     if (preview.src.startsWith('blob:')) {
@@ -300,11 +302,9 @@ galleryInput.addEventListener('change', handleImageSelection);
 // 🔑 로그인 체크
 // ============================================================
 
-// ✅ 수정
+//
 function checkLoginAndAct(targetInputId) {
     if (window.isUserLoggedIn) {
-        const mockup = document.getElementById('videoMockup');
-        if (mockup) mockup.style.display = 'none';
         document.getElementById(targetInputId).click();
     } else {
         alert(t.alertLoginRequired);
