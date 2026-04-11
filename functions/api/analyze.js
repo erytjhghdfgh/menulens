@@ -2,7 +2,7 @@ export async function onRequestPost(context) {
   const { request, env } = context;
   const apiKey = env.GEMINI_API_KEY;
 
-  // ✅ 1단계: 토큰 존재 확인 (가벼움)
+  // ✅ 1단계: 토큰 존재 확인
   const authHeader = request.headers.get('Authorization') || '';
   const idToken = authHeader.replace('Bearer ', '').trim();
   if (!idToken) {
@@ -25,19 +25,28 @@ export async function onRequestPost(context) {
       { status: 403, headers: { 'Content-Type': 'application/json' } });
   }
 
-  // ✅ 3단계: 검증 통과한 사람만 이미지 읽기
+  // ✅ 3단계: 요청 바디 읽기 및 크기 제한
   const body = await request.arrayBuffer();
   if (body.byteLength > 4 * 1024 * 1024) {
     return new Response(JSON.stringify({ error: { message: 'Image size exceeds 4MB limit.' } }), 
-     { status: 413, headers: { 'Content-Type': 'application/json' } });
+      { status: 413, headers: { 'Content-Type': 'application/json' } });
   }
+
   let requestBody;
-try {
+  try {
     requestBody = JSON.parse(new TextDecoder().decode(body));
-} catch {
+  } catch {
     return new Response(JSON.stringify({ error: { message: 'Invalid JSON body.' } }), 
-        { status: 400, headers: { 'Content-Type': 'application/json' } });
-}
+      { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+
+  // ✅ 4단계: 프론트에서 받은 값 추출 (이미지 + 언어/국가만)
+  const { imageData, mimeType, lang, country } = requestBody;
+
+  if (!imageData || !mimeType) {
+    return new Response(JSON.stringify({ error: { message: 'Missing image data.' } }), 
+      { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
 
   // ✅ API 키 확인
   if (!apiKey) {
@@ -45,33 +54,11 @@ try {
       { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 
-  // ✅ 4단계: Gemini API 호출
-  try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...requestBody,
-        generationConfig: {
-          responseMimeType: "application/json",
-        }
-      })
-    });
-    const rawText = await response.text();
-    return new Response(rawText, {
-      status: response.status,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  } catch (error) {
-    return new Response(JSON.stringify({ error: { message: error.message || 'Server error' } }), 
-      { status: 500, headers: { 'Content-Type': 'application/json' } });
-  }
-}
+  // ✅ 5단계: 프롬프트를 백엔드에서 직접 조립 (핵심 보안)
+  const currentLang = lang || 'en';
+  const userCountry = country || 'Unknown';
 
-const { imageData, mimeType, lang, country } = requestBody;
-
-const promptText = `
+  const promptText = `
 [You are an expert OCR and translation AI system for a restaurant menu app. Your task is to extract all data from the provided menu image and format it into strict JSON.]
 
 [CONTEXT]
@@ -80,7 +67,7 @@ const promptText = `
 
 [CRITICAL OUTPUT RULE: STRICT JSON ONLY]
 You MUST output your response ONLY as a raw, valid JSON object.
-Do NOT wrap the JSON in markdown blocks (e.g., do not use ```json or ```).
+Do NOT wrap the JSON in markdown blocks (e.g., do not use \`\`\`json or \`\`\`).
 Do NOT output any other text, HTML, or explanations outside the JSON object.
 
 [Exception Handling Rules] (Check this first)
@@ -110,20 +97,19 @@ Return EXACTLY this JSON: {"status": "error", "errorCode": "BLURRY_IMAGE", "rest
           "description": "Short description in ${currentLang}",
           "allergens": ["Allergen 1", "Allergen 2"],
           "isSoldOut": false,
-           "options": [
-  {
-    "optionGroupName": "Translated option group name in ${currentLang}",
-    "choices": [
-      { "label": "Translated choice name in ${currentLang}", "additionalPrice": "+$1.00 or empty string if free" }
-    ]
-  }
-]
+          "options": [
+            {
+              "optionGroupName": "Translated option group name in ${currentLang}",
+              "choices": [
+                { "label": "Translated choice name in ${currentLang}", "additionalPrice": "+$1.00 or empty string if free" }
+              ]
+            }
+          ]
         }
       ]
     }
   ]
 }
-
 
 [Field Specific Guidelines]
 
@@ -186,10 +172,35 @@ Return EXACTLY this JSON: {"status": "error", "errorCode": "BLURRY_IMAGE", "rest
 - Return empty array [] if no options are written on the menu.
 `;
 
-const geminiBody = {
-    contents: [{ parts: [{ text: promptText }, { inline_data: { mime_type: mimeType, data: imageData } }] }],
+  // ✅ 6단계: Gemini 요청 바디를 백엔드에서 직접 조립
+  const geminiBody = {
+    contents: [{
+      parts: [
+        { text: promptText },
+        { inline_data: { mime_type: mimeType, data: imageData } }
+      ]
+    }],
     generationConfig: {
-        responseMimeType: "application/json",
-        maxOutputTokens: 4096  // 이것도 여기서 고정
+      responseMimeType: "application/json",
+      maxOutputTokens: 8192
     }
-};
+  };
+
+  // ✅ 7단계: Gemini API 호출
+  try {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(geminiBody)
+    });
+    const rawText = await response.text();
+    return new Response(rawText, {
+      status: response.status,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ error: { message: error.message || 'Server error' } }), 
+      { status: 500, headers: { 'Content-Type': 'application/json' } });
+  }
+}
