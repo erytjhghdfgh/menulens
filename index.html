@@ -168,6 +168,9 @@ window.saveUserConsent = async function(agreedAI) {
         window.cancelConsentAndLogout = async function() {
             await signOut(auth);
         };
+// 이 줄 추가
+let resolveAuthReady;
+window.authReady = new Promise(resolve => { resolveAuthReady = resolve; });
 
 // 수정된 onAuthStateChanged 코드
 onAuthStateChanged(auth, async (user) => { // async 추가됨
@@ -201,6 +204,7 @@ onAuthStateChanged(auth, async (user) => { // async 추가됨
         const mockup = document.getElementById('videoMockup');
         if (mockup) mockup.style.display = 'block';
     }
+    resolveAuthReady(); // ← 이 줄 추가 (확인 끝났다고 신호)
 });
         
 
