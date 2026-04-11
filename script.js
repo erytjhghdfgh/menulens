@@ -20,7 +20,7 @@ document.getElementById('appTitle').innerText = t.title;
 document.getElementById('appSlogan').innerText = t.slogan;
 document.getElementById('btnScan').innerText = t.btn;
 document.getElementById('btnUpload').innerText = t.btnUpload;
-document.getElementById('loading').innerHTML = t.loading + ' <span id="loadingPct"></span>';
+document.getElementById('loading').innerHTML = `<div class="spinner"></div><span>${t.loading}</span>`;
 document.getElementById('disclaimer').innerText = t.disclaimer;
 
 // 로그인 영역
@@ -209,52 +209,6 @@ function esc(str) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
-}
-
-
-// ============================================================
-// 로딩 퍼센트 관련 변수 & 함수
-// ============================================================
-const stages = [
-    { end: 20, dur: 4000 },
-    { end: 50, dur: 8000 },
-    { end: 80, dur: 15000 },
-    { end: 95, dur: 15000 },
-    { end: 99, dur: 8000 },
-];
-
-let _raf, _stageIdx = 0, _stageStart = null, _curPct = 0;
-
-function startLoading() {
-    _stageIdx = 0;
-    _stageStart = null;
-    _curPct = 0;
-    document.getElementById('loadingPct').textContent = '0%';
-    loading.style.display = 'block';
-    _raf = requestAnimationFrame(_loadTick);
-}
-
-function stopLoading() {
-    cancelAnimationFrame(_raf);
-    document.getElementById('loadingPct').textContent = '100%';
-    setTimeout(() => { loading.style.display = 'none'; }, 300);
-}
-
-
-function _loadTick(ts) {
-    if (!_stageStart) _stageStart = ts;
-    const stage = stages[_stageIdx];
-    const prev = _stageIdx > 0 ? stages[_stageIdx - 1].end : 0;
-    const progress = Math.min((ts - _stageStart) / stage.dur, 1);
-    _curPct = prev + (stage.end - prev) * progress;
-
-    document.getElementById('loadingPct').textContent = Math.round(_curPct) + '%';
-
-    if (progress >= 1 && _stageIdx < stages.length - 1) {
-        _stageIdx++;
-        _stageStart = null;
-    }
-    _raf = requestAnimationFrame(_loadTick);
 }
 
 // 📦 이미지 압축 함수 (Canvas → WebP)
