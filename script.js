@@ -195,19 +195,6 @@ function updateConsentButton() {
     btn.style.pointerEvents = required ? 'auto' : 'none';
 }
 
-// 기존 코드 (549~553줄) → 아래로 교체
-document.getElementById('btnGoogleLogin').addEventListener('click', () => {
-    // ✅ 이미 동의한 경우 바로 로그인
-    if (localStorage.getItem('menulens_agreed_terms') === 'true') {
-        window.triggerGoogleLogin();
-        return;
-    }
-    // 동의 안 한 경우만 모달 표시
-    buildConsentModal();
-    document.getElementById('consentModal').style.display = 'flex';
-});
-
-
 function cleanJsonString(str) {
     return str.replace(/```json\n?|```\n?/g, '').trim();
 }
