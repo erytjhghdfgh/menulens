@@ -10,21 +10,24 @@ export async function onRequestPost(context) {
       { status: 401, headers: { 'Content-Type': 'application/json' } });
   }
 
-  // ✅ 2단계: 토큰 유효한지 Google에 검증
-  const verifyRes = await fetch(
-    `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${env.FIREBASE_WEB_API_KEY}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ idToken })
-    }
-  );
-  const verifyData = await verifyRes.json();
-  if (!verifyRes.ok || !verifyData.users || verifyData.users.length === 0) {
-    return new Response(JSON.stringify({ error: { message: 'Invalid user.' } }), 
-      { status: 403, headers: { 'Content-Type': 'application/json' } });
-  }
+// ✅ 이걸로 교체
+import { jwtVerify, createRemoteJWKSet } from 'jose';
 
+const JWKS = createRemoteJWKSet(
+  new URL('https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com')
+);
+
+try {
+  const { payload } = await jwtVerify(idToken, JWKS, {
+    issuer: `https://securetoken.google.com/${env.FIREBASE_PROJECT_ID}`,
+    audience: env.FIREBASE_PROJECT_ID,
+  });
+  // payload.uid, payload.email 등 유저 정보 사용 가능
+} catch (e) {
+  return new Response(JSON.stringify({ error: { message: 'Invalid token.' } }),
+    { status: 403, headers: { 'Content-Type': 'application/json' } });
+}
+  
   // ✅ 3단계: 요청 바디 읽기 및 크기 제한
   const body = await request.arrayBuffer();
   if (body.byteLength > 4 * 1024 * 1024) {
