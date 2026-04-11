@@ -55,7 +55,6 @@ try {
         ...requestBody,
         generationConfig: {
           responseMimeType: "application/json",
-          thinkingConfig: { thinkingBudget: 8192 }
         }
       })
     });
