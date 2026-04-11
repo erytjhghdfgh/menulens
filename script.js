@@ -62,7 +62,6 @@ function buildConsentModal() {
         <div style="background:#fff; width:100%; max-width:480px; margin:0 auto;
                     border-radius:20px 20px 0 0; padding:28px 24px 40px; box-shadow:0 -8px 30px rgba(0,0,0,0.15);">
             
-            <!-- 헤더 -->
             <div style="text-align:center; margin-bottom:20px;">
                 <div style="font-size:2rem; margin-bottom:8px;">🔍</div>
                 <h2 style="font-size:1.15rem; font-weight:800; color:#1a1a1a; margin-bottom:6px;">
@@ -73,7 +72,6 @@ function buildConsentModal() {
                 </p>
             </div>
 
-            <!-- 전체 동의 -->
             <label style="display:flex; align-items:center; gap:12px;
                    background:#fff4eb; border:1.5px solid #FF7300; border-radius:12px;
                    padding:14px 16px; cursor:pointer; margin-bottom:12px;">
@@ -83,10 +81,7 @@ function buildConsentModal() {
 
             <div style="border-top:1px solid #eee; margin-bottom:12px;"></div>
 
-            <!-- 개별 동의 항목들 -->
             <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:20px;">
-
-                <!-- 이용약관 -->
                 <label style="display:flex; align-items:center; gap:12px;
                        background:#fafafa; border:1px solid #e8e8e8; border-radius:10px;
                        padding:12px 14px; cursor:pointer;">
@@ -103,7 +98,6 @@ function buildConsentModal() {
                        onclick="event.stopPropagation()">${t.consentTermsLink}</a>
                 </label>
 
-                <!-- 개인정보처리방침 -->
                 <label style="display:flex; align-items:center; gap:12px;
                        background:#fafafa; border:1px solid #e8e8e8; border-radius:10px;
                        padding:12px 14px; cursor:pointer;">
@@ -120,7 +114,6 @@ function buildConsentModal() {
                        onclick="event.stopPropagation()">${t.consentPrivacyLink}</a>
                 </label>
 
-                <!-- ✅ AI 학습 동의 (선택으로 변경) -->
                 <label style="display:flex; align-items:center; gap:12px;
                        background:#fafafa; border:1px solid #e8e8e8; border-radius:10px;
                        padding:12px 14px; cursor:pointer;">
@@ -141,15 +134,14 @@ function buildConsentModal() {
                 </label>
             </div>
 
-            <!-- 동의 후 로그인 버튼 -->
             <button id="btnConsentConfirm"
                     style="width:100%; padding:16px; background:#FF7300; color:#fff;
                            border:none; border-radius:12px; font-size:1rem; font-weight:700;
                            cursor:pointer; opacity:0.4; pointer-events:none; transition:all 0.2s;">
-<img src="google-signin-btn.svg" alt="" 
-     style="width:20px; height:20px; object-fit:contain; 
-            filter:brightness(0) invert(1); margin-right:8px; vertical-align:middle;">
-${t.consentBtn}
+                <img src="google-signin-btn.svg" alt="" 
+                     style="width:20px; height:20px; object-fit:contain; 
+                            filter:brightness(0) invert(1); margin-right:8px; vertical-align:middle;">
+                ${t.consentBtn}
             </button>
 
             <button id="btnConsentCancel"
@@ -160,8 +152,11 @@ ${t.consentBtn}
         </div>
     `;
 
-    // 모달 재생성 후 이벤트 다시 등록
+    // 모달 이벤트 리스너 등록
     document.getElementById('btnConsentCancel').addEventListener('click', () => {
+        if (typeof window.cancelConsentAndLogout === 'function') {
+            window.cancelConsentAndLogout();
+        }
         document.getElementById('consentModal').style.display = 'none';
     });
 
@@ -182,16 +177,16 @@ ${t.consentBtn}
         });
     });
 
-    document.getElementById('btnConsentConfirm').addEventListener('click', () => {
+    // ✅ 동의 버튼 클릭 시 index.html에 만들어둔 DB 저장 함수 호출
+    document.getElementById('btnConsentConfirm').addEventListener('click', async () => {
         const agreedAI = document.getElementById('agreeAI').checked;
-        localStorage.setItem('menulens_agreed_ai', agreedAI ? 'true' : 'false');
-        localStorage.setItem('menulens_agreed_terms', 'true');
+        if (typeof window.saveUserConsent === 'function') {
+            await window.saveUserConsent(agreedAI);
+        }
         document.getElementById('consentModal').style.display = 'none';
-        window.triggerGoogleLogin();
     });
 }
 
-// ✅ agreeAI는 선택이므로 Terms + Privacy만 체크되면 버튼 활성화
 function updateConsentButton() {
     const required = document.getElementById('agreeTerms').checked &&
                      document.getElementById('agreePrivacy').checked;
