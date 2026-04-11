@@ -1,3 +1,9 @@
+import { jwtVerify, createRemoteJWKSet } from 'jose';
+
+const JWKS = createRemoteJWKSet(
+  new URL('https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com')
+);
+
 export async function onRequestPost(context) {
   const { request, env } = context;
   const apiKey = env.GEMINI_API_KEY;
@@ -10,23 +16,16 @@ export async function onRequestPost(context) {
       { status: 401, headers: { 'Content-Type': 'application/json' } });
   }
 
-// ✅ 이걸로 교체
-import { jwtVerify, createRemoteJWKSet } from 'jose';
-
-const JWKS = createRemoteJWKSet(
-  new URL('https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com')
-);
-
-try {
-  const { payload } = await jwtVerify(idToken, JWKS, {
-    issuer: `https://securetoken.google.com/${env.FIREBASE_PROJECT_ID}`,
-    audience: env.FIREBASE_PROJECT_ID,
-  });
-  // payload.uid, payload.email 등 유저 정보 사용 가능
-} catch (e) {
-  return new Response(JSON.stringify({ error: { message: 'Invalid token.' } }),
-    { status: 403, headers: { 'Content-Type': 'application/json' } });
-}
+  // ✅ 2단계: JWT 자체 검증 (구글 서버 호출 없음)
+  try {
+    await jwtVerify(idToken, JWKS, {
+      issuer: `https://securetoken.google.com/${env.FIREBASE_PROJECT_ID}`,
+      audience: env.FIREBASE_PROJECT_ID,
+    });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: { message: 'Invalid token.' } }),
+      { status: 403, headers: { 'Content-Type': 'application/json' } });
+  }
   
   // ✅ 3단계: 요청 바디 읽기 및 크기 제한
   const body = await request.arrayBuffer();
