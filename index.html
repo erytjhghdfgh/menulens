@@ -33,7 +33,7 @@
         </div>
     </div>
 
-    <div class="video-mockup">
+    <div class="video-mockup" id="videoMockup">
         <video autoplay muted loop playsinline>
             <source src="demo-video.mp4" type="video/mp4">
         </video>
@@ -198,6 +198,8 @@ onAuthStateChanged(auth, async (user) => { // async 추가됨
         document.getElementById('disclaimer').style.display = 'none';
         document.getElementById('feedbackContainer').style.display = 'none';
         document.getElementById('loading').style.display = 'none';
+        const mockup = document.getElementById('videoMockup');
+        if (mockup) mockup.style.display = 'block';
     }
 });
         
