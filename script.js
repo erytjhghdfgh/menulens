@@ -257,6 +257,28 @@ function _loadTick(ts) {
     _raf = requestAnimationFrame(_loadTick);
 }
 
+// 📦 이미지 압축 함수 (Canvas → WebP)
+function compressImage(file) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = function() {
+            URL.revokeObjectURL(url);
+            const MAX = 1920;
+            let w = img.width, h = img.height;
+            if (w > MAX || h > MAX) {
+                if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+                else { w = Math.round(w * MAX / h); h = MAX; }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            canvas.toBlob((blob) => resolve(blob), 'image/webp', 0.82);
+        };
+        img.src = url;
+    });
+}
+
 // ============================================================
 // 📷 이미지 선택 처리
 // ============================================================
@@ -287,13 +309,17 @@ function handleImageSelection(event) {
 
     startLoading();
 
+// 수정 후
+compressImage(file).then((compressedBlob) => {
     const reader = new FileReader();
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(compressedBlob);
     reader.onload = function () {
         const base64Image = reader.result.split(',')[1];
-        analyzeMenuWithAI(base64Image, file);
+        analyzeMenuWithAI(base64Image, compressedBlob);
     };
-
+});
+    
+    
     event.target.value = '';
 }
 
@@ -320,7 +346,7 @@ async function analyzeMenuWithAI(base64Data, file) {
     // ✅ 이미지 데이터 + 언어/국가 정보만 전송 (프롬프트는 백엔드에서 조립)
     const payload = {
         imageData: base64Data,
-        mimeType: file.type || "image/jpeg",
+        mimeType: "image/webp",
         lang: currentLang,
         country: userCountry
     };
