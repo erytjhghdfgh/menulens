@@ -1,5 +1,7 @@
 {
+  "name": "menulens",
+  "version": "1.0.0",
   "dependencies": {
-    "jose": "^6.2.2"
+    "jose": "^5.0.0"
   }
 }
