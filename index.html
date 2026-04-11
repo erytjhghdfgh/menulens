@@ -93,8 +93,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, deleteUser, reauthenticateWithPopup } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
-        // ✅ getDoc, setDoc 추가됨
-        import { getFirestore, collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, doc, getDoc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 
         const firebaseConfig = {
@@ -240,41 +239,47 @@
             }
         };
 
-        document.getElementById('btnWithdraw').addEventListener('click', async () => {
-            const t = getT();
-            const user = auth.currentUser;
-            if (!user) return;
+document.getElementById('btnWithdraw').addEventListener('click', async () => {
+    const t = getT();
+    const user = auth.currentUser;
+    if (!user) return;
 
-            if (confirm(t.alertWithdrawConfirm)) {
-                try {
-                    await reauthenticateWithPopup(user, provider);
+    if (confirm(t.alertWithdrawConfirm)) {
+        try {
+            await reauthenticateWithPopup(user, provider);
 
-                    const menuQuery = query(collection(db, "valid_menus"), where("uid", "==", user.uid));
-                    const menuSnapshot = await getDocs(menuQuery);
-                    
-                    await Promise.all(menuSnapshot.docs.map(d =>
-                        updateDoc(doc(db, "valid_menus", d.id), { uid: null, userEmail: null })
-                    ));
+            // 1. 메뉴 데이터 익명화 (uid, userEmail null 처리)
+            const menuQuery = query(collection(db, "valid_menus"), where("uid", "==", user.uid));
+            const menuSnapshot = await getDocs(menuQuery);
+            await Promise.all(menuSnapshot.docs.map(d =>
+                updateDoc(doc(db, "valid_menus", d.id), { uid: null, userEmail: null })
+            ));
 
-                    const feedbackQuery = query(collection(db, "feedbacks"), where("user", "==", user.email));
-                    const feedbackSnapshot = await getDocs(feedbackQuery);
-                    await Promise.all(feedbackSnapshot.docs.map(d =>
-                        updateDoc(doc(db, "feedbacks", d.id), { user: null })
-                    ));
+            // 2. 피드백 데이터 익명화 (user null 처리)
+            const feedbackQuery = query(collection(db, "feedbacks"), where("user", "==", user.email));
+            const feedbackSnapshot = await getDocs(feedbackQuery);
+            await Promise.all(feedbackSnapshot.docs.map(d =>
+                updateDoc(doc(db, "feedbacks", d.id), { user: null })
+            ));
 
-                    await deleteUser(user);
-                    alert(t.alertWithdrawSuccess);
-                    window.location.reload();
-                } catch (error) {
-                    console.error("Account deletion failed:", error);
-                    if (error.code === 'auth/popup-closed-by-user') {
-                        alert(t.alertReopenWindow);
-                    } else {
-                        alert(t.alertWithdrawFail);
-                    }
-                }
+            // 🌟 3. [추가된 부분] users 컬렉션에서 유저의 회원정보 문서 완전히 삭제!
+            await deleteDoc(doc(db, "users", user.uid));
+
+            // 4. 구글 Authentication에서 유저 계정 영구 삭제
+            await deleteUser(user);
+            
+            alert(t.alertWithdrawSuccess);
+            window.location.reload();
+        } catch (error) {
+            console.error("Account deletion failed:", error);
+            if (error.code === 'auth/popup-closed-by-user') {
+                alert(t.alertReopenWindow);
+            } else {
+                alert(t.alertWithdrawFail);
             }
-        });
+        }
+    }
+});
 
         window.saveValidMenuToFirebase = async function(file, aiResultText) {
             if (!window.isUserLoggedIn || !auth.currentUser) return;
