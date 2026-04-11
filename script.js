@@ -7,8 +7,10 @@ document.querySelector('.bottom-sticky-bar').addEventListener('touchmove', funct
 // 🌍 1. 브라우저 언어/국가 감지
 // ============================================================
 const userLanguage = navigator.language || 'en-US';
-const langPrefix = userLanguage.split('-')[0];
+const langParts = userLanguage.split('-');
+const langPrefix = langParts[0];
 const currentLang = uiTranslations[langPrefix] ? langPrefix : 'en';
+const userCountry = langParts[1] || 'Unknown';
 const t = uiTranslations[currentLang]; // 단축 참조
 
 // ============================================================
@@ -270,13 +272,13 @@ function handleImageSelection(event) {
     const mockup = document.getElementById('videoMockup');
     if (mockup) mockup.style.display = 'none';
 
-if (preview) {
-    if (preview.src.startsWith('blob:')) {
-        URL.revokeObjectURL(preview.src);  // ← 이전 것 해제
+    if (preview) {
+        if (preview.src.startsWith('blob:')) {
+            URL.revokeObjectURL(preview.src);
+        }
+        preview.src = URL.createObjectURL(file);
+        preview.style.display = 'block';
     }
-    preview.src = URL.createObjectURL(file);
-    preview.style.display = 'block';
-}
 
     resultContainer.innerHTML = '';
     resultContainer.style.display = 'none';
@@ -301,8 +303,6 @@ galleryInput.addEventListener('change', handleImageSelection);
 // ============================================================
 // 🔑 로그인 체크
 // ============================================================
-
-//
 function checkLoginAndAct(targetInputId) {
     if (window.isUserLoggedIn) {
         document.getElementById(targetInputId).click();
@@ -311,38 +311,36 @@ function checkLoginAndAct(targetInputId) {
         document.getElementById('authContainer').scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 }
+
 // ============================================================
 // 🤖 메뉴 분석
 // ============================================================
 async function analyzeMenuWithAI(base64Data, file) {
 
-    // 이미지 데이터만 전송
-const payload = {
-    imageData: base64Data,
-    mimeType: file.type || "image/jpeg"
-};
-fetch('/api/analyze', {
-    body: JSON.stringify(payload)
-})
-    
+    // ✅ 이미지 데이터 + 언어/국가 정보만 전송 (프롬프트는 백엔드에서 조립)
+    const payload = {
+        imageData: base64Data,
+        mimeType: file.type || "image/jpeg",
+        lang: currentLang,
+        country: userCountry
+    };
+
     try {
-
-
-if (!window.auth) {
-    throw new Error(t.alertLoginRequired);
-}
-const currentUser = window.auth?.currentUser;
-if (!currentUser) throw new Error(t.alertLoginRequired);
+        if (!window.auth) {
+            throw new Error(t.alertLoginRequired);
+        }
+        const currentUser = window.auth?.currentUser;
+        if (!currentUser) throw new Error(t.alertLoginRequired);
 
         const idToken = await currentUser.getIdToken();
 
         const response = await fetch('/api/analyze', {
             method: 'POST',
             headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${idToken}`            
-             },
-            body: JSON.stringify(requestBody)
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`            
+            },
+            body: JSON.stringify(payload)
         });
 
         const rawText = await response.text();
@@ -351,18 +349,17 @@ if (!currentUser) throw new Error(t.alertLoginRequired);
 
         if (!aiResultText) throw new Error(t.alertAiReadError);
 
+        const parsedResult = (() => {
+            try { return JSON.parse(cleanJsonString(aiResultText)); }
+            catch(e) { return null; }
+        })();
 
-const parsedResult = (() => {
-    try { return JSON.parse(cleanJsonString(aiResultText)); }
-    catch(e) { return null; }
-})();
+        const isInvalidMenu = parsedResult?.status === "error";
+        if (!isInvalidMenu && typeof window.saveValidMenuToFirebase === 'function') {
+            window.saveValidMenuToFirebase(file, aiResultText);
+        }
 
-const isInvalidMenu = parsedResult?.status === "error";
-if (!isInvalidMenu && typeof window.saveValidMenuToFirebase === 'function') {
-    window.saveValidMenuToFirebase(file, aiResultText);
-}
-
-renderStoryMode(parsedResult); // ← 이미 뜯어놓은 객체 전달
+        renderStoryMode(parsedResult);
 
     } catch (error) {
         stopLoading();
@@ -374,16 +371,15 @@ renderStoryMode(parsedResult); // ← 이미 뜯어놓은 객체 전달
 // ============================================================
 // 🎨 결과 렌더링
 // ============================================================
-function renderStoryMode(data) {  // 이미 파싱된 객체 받음
+function renderStoryMode(data) {
     stopLoading();
     disclaimer.style.display = 'block';
     resultContainer.style.display = 'block';
     feedbackContainer.style.display = 'block';
 
-        document.getElementById('btnToggleFeedback').style.display = 'block';
+    document.getElementById('btnToggleFeedback').style.display = 'block';
     document.getElementById('feedbackFormArea').style.display = 'none';
     document.getElementById('feedbackHeaderText').innerHTML = t.feedbackHeader;
-
 
     const feedbackBtn = document.getElementById('btnSubmitFeedback');
     feedbackBtn.disabled = false;
@@ -395,7 +391,6 @@ function renderStoryMode(data) {  // 이미 파싱된 객체 받음
     try {
         if (!data) throw new Error("파싱 실패");
         
-        // 바로 data 사용 (JSON.parse 필요 없음!)
         if (data.status === "error") {
             resultContainer.innerHTML = `
                 <div class="markdown-body">
@@ -405,37 +400,28 @@ function renderStoryMode(data) {  // 이미 파싱된 객체 받음
             return;
         }
 
-        // 성공 시 HTML 동적 생성
         let htmlContent = '';
 
-        // 1. 식당 포맷 및 특별 주문 방식 설명
         if (data.restaurantInfo) {
             htmlContent += `<p>${esc(data.restaurantInfo)}</p>`;
         }
 
-        // 2. 구분선 추가
         htmlContent += `<hr>`;
 
-        // 3. 카테고리별 메뉴 설명 렌더링
         if (data.categories && data.categories.length > 0) {
             data.categories.forEach(category => {
-                // 카테고리 이름
                 htmlContent += `<h3>${esc(category.categoryName)}</h3>`;
 
-                // 해당 카테고리의 메뉴 아이템들
                 category.items.forEach(item => {
-                    // 가격 배열을 HTML span 태그로 변환
                     const pricesHtml = item.prices.map(price => 
                         `<span class="dish-price">${esc(price)}</span>`
                     ).join('');
 
-                    // 설명이 빈 문자열인 경우(기성품 음료 등) p 태그 자체를 렌더링하지 않거나 빈 태그로 둠
                     const descHtml = item.description 
                         ? `<p class="dish-desc">${esc(item.description)}</p>`
-                        : ''; // ← 설명이 없으면 아예 아무것도 렌더링하지 않음
+                        : '';
 
-                    // 기존 HTML 템플릿에 데이터 삽입
-htmlContent += `
+                    htmlContent += `
     <div class="dish">
         <div class="dish-header">
             <div class="dish-title-group">
@@ -453,7 +439,6 @@ htmlContent += `
             });
         }
 
-        // 최종 완성된 HTML을 컨테이너에 삽입
         resultContainer.innerHTML = `
             <div class="markdown-body">
                 ${htmlContent}
