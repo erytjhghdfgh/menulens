@@ -329,7 +329,8 @@ galleryInput.addEventListener('change', handleImageSelection);
 // ============================================================
 // 🔑 로그인 체크
 // ============================================================
-function checkLoginAndAct(targetInputId) {
+async function checkLoginAndAct(targetInputId) {
+    await window.authReady; // Firebase 확인 끝날 때까지 기다려
     if (window.isUserLoggedIn) {
         document.getElementById(targetInputId).click();
     } else {
