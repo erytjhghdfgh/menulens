@@ -332,7 +332,8 @@ async function analyzeMenuWithAI(base64Data, file) {
 
         const rawText = await response.text();
         const data = JSON.parse(rawText);
-        const aiResultText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        const parts = data?.candidates?.[0]?.content?.parts ?? [];
+        const aiResultText = parts.find(p => !p.thought)?.text;
 
         if (!aiResultText) throw new Error(t.alertAiReadError);
 
