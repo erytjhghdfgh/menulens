@@ -261,6 +261,13 @@ function handleImageSelection(event) {
     disclaimer.style.display = 'none';
     feedbackContainer.style.display = 'none'; 
 
+    function startLoading() {
+    loading.style.display = 'flex';
+}
+
+function stopLoading() {
+    loading.style.display = 'none';
+}
     startLoading();
 
 // 수정 후
