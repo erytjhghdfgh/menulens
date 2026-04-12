@@ -179,14 +179,24 @@ function buildConsentModal() {
         });
     });
  
-    // ✅ 동의 버튼 클릭 시 index.html에 만들어둔 DB 저장 함수 호출
-    document.getElementById('btnConsentConfirm').addEventListener('click', async () => {
-        const agreedAI = document.getElementById('agreeAI').checked;
+// 수정: 동의 후 구글 팝업 실행
+document.getElementById('btnConsentConfirm').addEventListener('click', async () => {
+    const agreedAI = document.getElementById('agreeAI').checked;
+    document.getElementById('consentModal').style.display = 'none';
+
+    try {
+        const result = await signInWithPopup(window.auth, new GoogleAuthProvider());
+        const user = result.user;
+
+        // DB에 동의 저장
         if (typeof window.saveUserConsent === 'function') {
             await window.saveUserConsent(agreedAI);
         }
-        document.getElementById('consentModal').style.display = 'none';
-    });
+    } catch (error) {
+        console.error("Login failed:", error);
+    }
+});
+
 }
  
 function updateConsentButton() {
