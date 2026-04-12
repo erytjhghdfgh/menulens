@@ -154,10 +154,6 @@ window.doGoogleSignIn = async function(agreedAI) {
         let resolveAuthReady;
         window.authReady = new Promise(resolve => { resolveAuthReady = resolve; });
 
-
-        // ✅ redirect 후 돌아왔을 때 결과 처리
-import { getRedirectResult } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
-
 getRedirectResult(auth).then(async (result) => {
     if (!result) return; // redirect 결과 없으면 패스
     const user = result.user;
