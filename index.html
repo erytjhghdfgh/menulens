@@ -97,7 +97,7 @@
  
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, deleteUser, reauthenticateWithPopup } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+        import { getAuth, signInWithPopup, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut, deleteUser, reauthenticateWithPopup } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
         import { getFirestore, collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, doc, getDoc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
  
@@ -129,31 +129,17 @@
             document.getElementById('consentModal').style.display = 'flex';
         };
 
-        // ✅ [신규] 동의 완료 후 실제 구글 로그인 실행 (script.js의 btnConsentConfirm에서 호출)
-        window.doGoogleSignIn = async function(agreedAI) {
-            try {
-                const result = await signInWithPopup(auth, provider);
-                const user = result.user;
-
-                // DB에 동의 내역 저장
-                await setDoc(doc(db, "users", user.uid), {
-                    email: user.email,
-                    agreedTerms: true,
-                    consentAiLearning: agreedAI,
-                    lastLogin: serverTimestamp()
-                }, { merge: true });
-
-                // 로그인 UI 업데이트
-                window.isUserLoggedIn = true;
-                document.getElementById('loggedOutView').style.display = 'none';
-                document.getElementById('loggedInView').style.display = 'flex';
-                document.getElementById('userPhoto').src = user.photoURL;
-                document.getElementById('userName').textContent = user.displayName;
-
-            } catch (error) {
-                console.error("Login failed:", error);
-            }
-        };
+// ✅ [수정] signInWithPopup → signInWithRedirect 방식으로 변경
+window.doGoogleSignIn = async function(agreedAI) {
+    try {
+        // 동의 여부를 redirect 전에 sessionStorage에 임시 저장
+        sessionStorage.setItem('pendingAgreedAI', agreedAI ? 'true' : 'false');
+        await signInWithRedirect(auth, provider);
+        // 이 아래 코드는 redirect 후 실행 안 됨 (페이지가 이동하므로)
+    } catch (error) {
+        console.error("Login failed:", error);
+    }
+};
 
         // ✅ 로그인 버튼 클릭 이벤트
         document.getElementById('btnGoogleLogin').addEventListener('click', () => {
@@ -168,6 +154,31 @@
         let resolveAuthReady;
         window.authReady = new Promise(resolve => { resolveAuthReady = resolve; });
 
+
+        // ✅ redirect 후 돌아왔을 때 결과 처리
+import { getRedirectResult } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+
+getRedirectResult(auth).then(async (result) => {
+    if (!result) return; // redirect 결과 없으면 패스
+    const user = result.user;
+    const agreedAI = sessionStorage.getItem('pendingAgreedAI') === 'true';
+    sessionStorage.removeItem('pendingAgreedAI');
+
+    await setDoc(doc(db, "users", user.uid), {
+        email: user.email,
+        agreedTerms: true,
+        consentAiLearning: agreedAI,
+        lastLogin: serverTimestamp()
+    }, { merge: true });
+
+    window.isUserLoggedIn = true;
+    document.getElementById('loggedOutView').style.display = 'none';
+    document.getElementById('loggedInView').style.display = 'flex';
+    document.getElementById('userPhoto').src = user.photoURL;
+    document.getElementById('userName').textContent = user.displayName;
+}).catch((error) => {
+    console.error("Redirect result error:", error);
+});
         // ✅ 페이지 로드 시 자동 로그인 처리 (세션 유지용)
         onAuthStateChanged(auth, async (user) => {
             if (user) {
