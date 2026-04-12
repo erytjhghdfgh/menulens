@@ -127,23 +127,11 @@
         }
  
         // ✅ 로그인 흐름 완벽 수정 (DB 우선 확인)
+        // 수정: 버튼 클릭하면 동의 모달 먼저
         window.triggerGoogleLogin = async function() {
-            try {
-                const result = await signInWithPopup(auth, provider);
-                const user = result.user;
- 
-                const userDocRef = doc(db, "users", user.uid);
-                const userDocSnap = await getDoc(userDocRef);
- 
-                if (userDocSnap.exists() && userDocSnap.data().agreedTerms === true) {
-                    console.log("기존 유저 로그인 완료 - 모달 패스");
-                } else {
-                    if (typeof buildConsentModal === 'function') buildConsentModal();
-                    document.getElementById('consentModal').style.display = 'flex';
-                }
-            } catch (error) {
-                console.error("Login failed:", error);
-            }
+            // 동의 모달만 먼저 보여주고 끝
+            if (typeof buildConsentModal === 'function') buildConsentModal();
+            document.getElementById('consentModal').style.display = 'flex';
         };
  
         // ✅ 로그인 버튼 누르면 즉시 구글 팝업 띄우기
