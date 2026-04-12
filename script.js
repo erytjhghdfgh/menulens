@@ -179,24 +179,14 @@ function buildConsentModal() {
         });
     });
  
-// 수정: 동의 후 구글 팝업 실행
+// ✅ 수정 (window.doGoogleSignIn 호출)
 document.getElementById('btnConsentConfirm').addEventListener('click', async () => {
     const agreedAI = document.getElementById('agreeAI').checked;
     document.getElementById('consentModal').style.display = 'none';
-
-    try {
-        const result = await signInWithPopup(window.auth, new GoogleAuthProvider());
-        const user = result.user;
-
-        // DB에 동의 저장
-        if (typeof window.saveUserConsent === 'function') {
-            await window.saveUserConsent(agreedAI);
-        }
-    } catch (error) {
-        console.error("Login failed:", error);
+    if (typeof window.doGoogleSignIn === 'function') {
+        await window.doGoogleSignIn(agreedAI);
     }
 });
-
 }
  
 function updateConsentButton() {
