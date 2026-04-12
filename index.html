@@ -70,7 +70,7 @@
                 <label for="feedbackImgInput" id="feedbackAttachLabel" class="feedback-img-label">Attach Photo</label>
                 <input type="file" id="feedbackImgInput" accept="image/*" style="display: none;">
                 <div id="feedbackImgPreview" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;"></div>
-                <button id="btnSubmitFeedback" class="feedback-submit-btn" disabled>Send</button>
+                <button id="btnSubmitFeedback" class="feedback-submit-btn">Send</button>
             </div>
         </div>
     </div>
@@ -241,7 +241,7 @@ onAuthStateChanged(auth, async (user) => { // async 추가됨
                 btn.textContent = t.feedbackSend;
                 return;
             }
-            if (!feedbackType) {
+            if (!feedbackType && !text.trim() && files.length === 0) {
                 alert(t.alertFeedbackEmpty);
                 btn.disabled = false;
                 btn.textContent = t.feedbackSend;
