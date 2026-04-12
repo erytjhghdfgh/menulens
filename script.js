@@ -2,7 +2,7 @@
 document.querySelector('.bottom-sticky-bar').addEventListener('touchmove', function(e) {
     e.stopPropagation();
 }, { passive: true });
-
+ 
 // ============================================================
 // 🌍 1. 브라우저 언어/국가 감지
 // ============================================================
@@ -12,7 +12,7 @@ const langPrefix = langParts[0];
 const currentLang = uiTranslations[langPrefix] ? langPrefix : 'en';
 const userCountry = langParts[1] || 'Unknown';
 const t = uiTranslations[currentLang]; // 단축 참조
-
+ 
 // ============================================================
 // 🔤 2. UI 텍스트 일괄 적용
 // ============================================================
@@ -22,7 +22,7 @@ document.getElementById('btnScan').innerText = t.btn;
 document.getElementById('btnUpload').innerText = t.btnUpload;
 document.getElementById('loading').innerHTML = `<div class="spinner"></div><span>${t.loading}</span>`;
 document.getElementById('disclaimer').innerText = t.disclaimer;
-
+ 
 // 로그인 영역
 document.querySelector('#loggedOutView p').innerHTML = t.loginPromo;
 document.getElementById('btnLogout').innerText = t.logout;
@@ -31,14 +31,14 @@ document.getElementById('btnWithdraw').innerText = t.withdraw;
 if (document.getElementById('welcomeSuffix')) {
     document.getElementById('welcomeSuffix').innerText = t.welcomeSuffix;
 }
-
+ 
 // 피드백 영역
 document.querySelector('.feedback-header p').innerHTML = t.feedbackHeader;
 document.getElementById('btnToggleFeedback').innerText = t.feedbackToggle;
 document.getElementById('feedbackText').placeholder = t.feedbackPlaceholder;
 document.querySelector('.feedback-img-label').innerText = t.feedbackAttach;
 document.getElementById('btnSubmitFeedback').innerText = t.feedbackSend;
-
+ 
 // 아랍어 RTL 처리
 if (currentLang === 'ar') {
     document.body.style.direction = "rtl";
@@ -53,8 +53,8 @@ const resultContainer = document.getElementById('resultContainer');
 const loading = document.getElementById('loading');
 const disclaimer = document.getElementById('disclaimer');
 const feedbackContainer = document.getElementById('feedbackContainer');
-
-
+ 
+ 
 // ============================================================
 // 🗂 3. 동의 모달 동적 생성 (JS로 번역 텍스트 주입)
 // ============================================================
@@ -73,16 +73,16 @@ function buildConsentModal() {
                     ${t.consentSubtitle}
                 </p>
             </div>
-
+ 
             <label style="display:flex; align-items:center; gap:12px;
                    background:#fff4eb; border:1.5px solid #FF7300; border-radius:12px;
                    padding:14px 16px; cursor:pointer; margin-bottom:12px;">
                 <input type="checkbox" id="agreeAll" style="width:20px; height:20px; accent-color:#FF7300; cursor:pointer;">
                 <span style="font-size:0.95rem; font-weight:700; color:#FF7300;">${t.consentAll}</span>
             </label>
-
+ 
             <div style="border-top:1px solid #eee; margin-bottom:12px;"></div>
-
+ 
             <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:20px;">
                 <label style="display:flex; align-items:center; gap:12px;
                        background:#fafafa; border:1px solid #e8e8e8; border-radius:10px;
@@ -99,7 +99,7 @@ function buildConsentModal() {
                        style="font-size:0.78rem; color:#aaa; text-decoration:none; white-space:nowrap;"
                        onclick="event.stopPropagation()">${t.consentTermsLink}</a>
                 </label>
-
+ 
                 <label style="display:flex; align-items:center; gap:12px;
                        background:#fafafa; border:1px solid #e8e8e8; border-radius:10px;
                        padding:12px 14px; cursor:pointer;">
@@ -115,7 +115,7 @@ function buildConsentModal() {
                        style="font-size:0.78rem; color:#aaa; text-decoration:none; white-space:nowrap;"
                        onclick="event.stopPropagation()">${t.consentPrivacyLink}</a>
                 </label>
-
+ 
                 <label style="display:flex; align-items:center; gap:12px;
                        background:#fafafa; border:1px solid #e8e8e8; border-radius:10px;
                        padding:12px 14px; cursor:pointer;">
@@ -135,7 +135,7 @@ function buildConsentModal() {
                     </div>
                 </label>
             </div>
-
+ 
             <button id="btnConsentConfirm"
                     style="width:100%; padding:16px; background:#FF7300; color:#fff;
                            border:none; border-radius:12px; font-size:1rem; font-weight:700;
@@ -145,7 +145,7 @@ function buildConsentModal() {
                             filter:brightness(0) invert(1); margin-right:8px; vertical-align:middle;">
                 ${t.consentBtn}
             </button>
-
+ 
             <button id="btnConsentCancel"
                     style="width:100%; margin-top:10px; padding:10px; background:none;
                            border:none; color:#aaa; font-size:0.85rem; cursor:pointer;">
@@ -153,7 +153,7 @@ function buildConsentModal() {
             </button>
         </div>
     `;
-
+ 
     // 모달 이벤트 리스너 등록
     document.getElementById('btnConsentCancel').addEventListener('click', () => {
         if (typeof window.cancelConsentAndLogout === 'function') {
@@ -161,14 +161,14 @@ function buildConsentModal() {
         }
         document.getElementById('consentModal').style.display = 'none';
     });
-
+ 
     document.getElementById('agreeAll').addEventListener('change', function() {
         ['agreeTerms', 'agreePrivacy', 'agreeAI'].forEach(id => {
             document.getElementById(id).checked = this.checked;
         });
         updateConsentButton();
     });
-
+ 
     ['agreeTerms', 'agreePrivacy', 'agreeAI'].forEach(id => {
         document.getElementById(id).addEventListener('change', () => {
             const all = ['agreeTerms', 'agreePrivacy', 'agreeAI'].every(i =>
@@ -178,7 +178,7 @@ function buildConsentModal() {
             updateConsentButton();
         });
     });
-
+ 
     // ✅ 동의 버튼 클릭 시 index.html에 만들어둔 DB 저장 함수 호출
     document.getElementById('btnConsentConfirm').addEventListener('click', async () => {
         const agreedAI = document.getElementById('agreeAI').checked;
@@ -188,7 +188,7 @@ function buildConsentModal() {
         document.getElementById('consentModal').style.display = 'none';
     });
 }
-
+ 
 function updateConsentButton() {
     const required = document.getElementById('agreeTerms').checked &&
                      document.getElementById('agreePrivacy').checked;
@@ -196,11 +196,11 @@ function updateConsentButton() {
     btn.style.opacity = required ? '1' : '0.4';
     btn.style.pointerEvents = required ? 'auto' : 'none';
 }
-
+ 
 function cleanJsonString(str) {
     return str.replace(/```json\n?|```\n?/g, '').trim();
 }
-
+ 
 function esc(str) {
     if (!str) return '';
     return String(str)
@@ -210,7 +210,7 @@ function esc(str) {
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
 }
-
+ 
 // 📦 이미지 압축 함수 (Canvas → WebP)
 function compressImage(file) {
     return new Promise((resolve) => {
@@ -235,18 +235,18 @@ function compressImage(file) {
 function startLoading() {
     loading.style.display = 'flex';
 }
-
+ 
 function stopLoading() {
     loading.style.display = 'none';
 }
-
+ 
 // ============================================================
 // 📷 이미지 선택 처리
 // ============================================================
 function handleImageSelection(event) {
     const file = event.target.files[0];
     if (!file) return;
-
+ 
     if (file.size > 5 * 1024 * 1024) {
         alert(t.alertFileSize);
         event.target.value = '';
@@ -254,7 +254,7 @@ function handleImageSelection(event) {
     }
     const mockup = document.getElementById('videoMockup');
     if (mockup) mockup.style.display = 'none';
-
+ 
     if (preview) {
         if (preview.src.startsWith('blob:')) {
             URL.revokeObjectURL(preview.src);
@@ -262,13 +262,13 @@ function handleImageSelection(event) {
         preview.src = URL.createObjectURL(file);
         preview.style.display = 'block';
     }
-
+ 
     resultContainer.innerHTML = '';
     resultContainer.style.display = 'none';
     disclaimer.style.display = 'none';
     feedbackContainer.style.display = 'none'; 
     startLoading();
-
+ 
 // 수정 후
 compressImage(file).then((compressedBlob) => {
     const reader = new FileReader();
@@ -282,10 +282,10 @@ compressImage(file).then((compressedBlob) => {
     
     event.target.value = '';
 }
-
+ 
 cameraInput.addEventListener('change', handleImageSelection);
 galleryInput.addEventListener('change', handleImageSelection);
-
+ 
 // ============================================================
 // 🔑 로그인 체크
 // ============================================================
@@ -298,12 +298,12 @@ async function checkLoginAndAct(targetInputId) {
         document.getElementById('authContainer').scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 }
-
+ 
 // ============================================================
 // 🤖 메뉴 분석
 // ============================================================
 async function analyzeMenuWithAI(base64Data, file) {
-
+ 
     // ✅ 이미지 데이터 + 언어/국가 정보만 전송 (프롬프트는 백엔드에서 조립)
     const payload = {
         imageData: base64Data,
@@ -311,16 +311,16 @@ async function analyzeMenuWithAI(base64Data, file) {
         lang: currentLang,
         country: userCountry
     };
-
+ 
     try {
         if (!window.auth) {
             throw new Error(t.alertLoginRequired);
         }
         const currentUser = window.auth?.currentUser;
         if (!currentUser) throw new Error(t.alertLoginRequired);
-
+ 
         const idToken = await currentUser.getIdToken();
-
+ 
         const response = await fetch('/api/analyze', {
             method: 'POST',
             headers: { 
@@ -329,33 +329,33 @@ async function analyzeMenuWithAI(base64Data, file) {
             },
             body: JSON.stringify(payload)
         });
-
+ 
         const rawText = await response.text();
         const data = JSON.parse(rawText);
         const parts = data?.candidates?.[0]?.content?.parts ?? [];
         const aiResultText = parts.find(p => !p.thought)?.text;
-
+ 
         if (!aiResultText) throw new Error(t.alertAiReadError);
-
+ 
         const parsedResult = (() => {
             try { return JSON.parse(cleanJsonString(aiResultText)); }
             catch(e) { return null; }
         })();
-
+ 
         const isInvalidMenu = parsedResult?.status === "error";
         if (!isInvalidMenu && typeof window.saveValidMenuToFirebase === 'function') {
             window.saveValidMenuToFirebase(file, aiResultText);
         }
-
+ 
         renderStoryMode(parsedResult);
-
+ 
     } catch (error) {
         stopLoading();
         resultContainer.innerHTML = `<p style="text-align:center; padding:20px; color:#d9534f;">${t.alertAnalyzeError}<br>${error.message}</p>`;
         resultContainer.style.display = 'block';
     }
 }
-
+ 
 // ============================================================
 // 🎨 결과 렌더링
 // ============================================================
@@ -364,18 +364,18 @@ function renderStoryMode(data) {
     disclaimer.style.display = 'block';
     resultContainer.style.display = 'block';
     feedbackContainer.style.display = 'block';
-
+ 
     document.getElementById('btnToggleFeedback').style.display = 'block';
     document.getElementById('feedbackFormArea').style.display = 'none';
     document.getElementById('feedbackHeaderText').innerHTML = t.feedbackHeader;
-
+ 
     const feedbackBtn = document.getElementById('btnSubmitFeedback');
     feedbackBtn.disabled = false;
     feedbackBtn.textContent = t.feedbackSend;
     document.getElementById('feedbackText').value = '';
     document.getElementById('feedbackImgPreview').innerHTML = '';
     document.getElementById('feedbackImgInput').value = '';
-
+ 
     try {
         if (!data) throw new Error("파싱 실패");
         
@@ -387,13 +387,13 @@ function renderStoryMode(data) {
             `;
             return;
         }
-
+ 
         let htmlContent = '';
-
+ 
         if (data.restaurantInfo) {
             htmlContent += `<p>${esc(data.restaurantInfo)}</p>`;
         }
-
+ 
         htmlContent += `<hr>`;
         if (data.restaurantNotices && data.restaurantNotices.length > 0) {
             htmlContent += `<div class="restaurant-notices">`;
@@ -405,7 +405,7 @@ function renderStoryMode(data) {
         if (data.categories && data.categories.length > 0) {
             data.categories.forEach(category => {
                 htmlContent += `<h3>${esc(category.categoryName)}</h3>`;
-
+ 
                 category.items.forEach(item => {
                     const pricesHtml = item.prices.map(p => {
                         const labelHtml = p.label
@@ -413,11 +413,11 @@ function renderStoryMode(data) {
                             : '';
                         return `<span class="dish-price">${labelHtml}${esc(p.price)}</span>`;
                     }).join('');
-
+ 
                     const descHtml = item.description 
                         ? `<p class="dish-desc">${esc(item.description)}</p>`
                         : '';
-
+ 
                     htmlContent += `
     <div class="dish">
         <div class="dish-header">
@@ -435,13 +435,13 @@ function renderStoryMode(data) {
                 });
             });
         }
-
+ 
         resultContainer.innerHTML = `
             <div class="markdown-body">
                 ${htmlContent}
             </div>
         `;
-
+ 
     } catch (error) {
         console.error("JSON 파싱 에러:", error);
         resultContainer.innerHTML = `
@@ -451,7 +451,7 @@ function renderStoryMode(data) {
         `;
     }
 }
-
+ 
 // ============================================================
 // 📝 피드백 폼 동작 처리
 // ============================================================
@@ -462,16 +462,30 @@ document.getElementById('btnToggleFeedback').addEventListener('click', function(
         this.style.display = 'none';
     }
 });
-
+ 
+// 피드백 타입 버튼 단일 선택 로직
+document.getElementById('feedbackTypeButtons').addEventListener('click', function(e) {
+    const btn = e.target.closest('.feedback-type-btn');
+    if (!btn) return;
+ 
+    // 기존 선택 해제
+    document.querySelectorAll('.feedback-type-btn').forEach(b => b.classList.remove('selected'));
+    // 현재 버튼 선택
+    btn.classList.add('selected');
+ 
+    // 버튼 선택되면 Submit 활성화
+    document.getElementById('btnSubmitFeedback').disabled = false;
+});
+ 
 document.getElementById('feedbackImgInput').addEventListener('change', function(e) {
     const files = Array.from(e.target.files);
-
-    if (files.length > 3) {
+ 
+    if (files.length > 1) {
         alert(t.alertPhotoCount);
         this.value = '';
         return;
     }
-
+ 
     for (const f of files) {
         if (f.size > 5 * 1024 * 1024) {
             alert(`${t.alertPhotoSizePrefix}${f.name}${t.alertPhotoSizeSuffix}`);
@@ -480,7 +494,7 @@ document.getElementById('feedbackImgInput').addEventListener('change', function(
             return;
         }
     }
-
+ 
     const previewEl = document.getElementById('feedbackImgPreview');
     previewEl.innerHTML = '';
     files.forEach(f => {
@@ -499,7 +513,7 @@ document.getElementById('feedbackImgInput').addEventListener('change', function(
         reader.readAsDataURL(f);
     });
 });
-
+ 
 document.getElementById('btnSubmitFeedback').addEventListener('click', function() {
     if (typeof window.submitFeedback === 'function') {
         window.submitFeedback();
