@@ -57,16 +57,13 @@
         <button id="btnToggleFeedback" class="feedback-toggle-btn">📝 Leave Feedback</button>
  
         <div id="feedbackFormArea" class="feedback-form-area" style="display: none;">
-            <!-- [필수] 단일 선택 버튼 3개 -->
             <div id="feedbackTypeButtons" style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px;">
                 <button class="feedback-type-btn" data-type="recognition">📷 <span class="feedback-type-label">사진 인식이 안 됐어요</span></button>
                 <button class="feedback-type-btn" data-type="result">❌ <span class="feedback-type-label">결과가 이상하게 나왔어요</span></button>
                 <button class="feedback-type-btn" data-type="bug">🐛 <span class="feedback-type-label">앱에 문제가 생겼어요</span></button>
             </div>
-            <!-- [선택] 텍스트 입력창 100자 제한 -->
             <textarea id="feedbackText" placeholder="Write your feedback here..." maxlength="100"></textarea>
             <div class="feedback-actions">
-                <!-- [선택] 사진 첨부 1장 -->
                 <label for="feedbackImgInput" id="feedbackAttachLabel" class="feedback-img-label">Attach Photo</label>
                 <input type="file" id="feedbackImgInput" accept="image/*" style="display: none;">
                 <div id="feedbackImgPreview" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;"></div>
@@ -120,109 +117,110 @@
         const db = getFirestore(app);
         const storage = getStorage(app);
         const provider = new GoogleAuthProvider();
- 
+
         function getT() {
             const lang = (navigator.language || 'en').split('-')[0];
             return uiTranslations[lang] || uiTranslations['en'];
         }
- 
-        // ✅ 로그인 흐름 완벽 수정 (DB 우선 확인)
-        // 수정: 버튼 클릭하면 동의 모달 먼저
+
+        // ✅ [수정] 버튼 클릭 시 동의 모달 먼저 표시
         window.triggerGoogleLogin = async function() {
-            // 동의 모달만 먼저 보여주고 끝
             if (typeof buildConsentModal === 'function') buildConsentModal();
             document.getElementById('consentModal').style.display = 'flex';
         };
- 
-        // ✅ 로그인 버튼 누르면 즉시 구글 팝업 띄우기
+
+        // ✅ [신규] 동의 완료 후 실제 구글 로그인 실행 (script.js의 btnConsentConfirm에서 호출)
+        window.doGoogleSignIn = async function(agreedAI) {
+            try {
+                const result = await signInWithPopup(auth, provider);
+                const user = result.user;
+
+                // DB에 동의 내역 저장
+                await setDoc(doc(db, "users", user.uid), {
+                    email: user.email,
+                    agreedTerms: true,
+                    consentAiLearning: agreedAI,
+                    lastLogin: serverTimestamp()
+                }, { merge: true });
+
+                // 로그인 UI 업데이트
+                window.isUserLoggedIn = true;
+                document.getElementById('loggedOutView').style.display = 'none';
+                document.getElementById('loggedInView').style.display = 'flex';
+                document.getElementById('userPhoto').src = user.photoURL;
+                document.getElementById('userName').textContent = user.displayName;
+
+            } catch (error) {
+                console.error("Login failed:", error);
+            }
+        };
+
+        // ✅ 로그인 버튼 클릭 이벤트
         document.getElementById('btnGoogleLogin').addEventListener('click', () => {
             window.triggerGoogleLogin();
         });
- 
-// 수정된 saveUserConsent 코드
-window.saveUserConsent = async function(agreedAI) {
-    const user = auth.currentUser;
-    if (user) {
-        // DB에 동의 내역 저장
-        await setDoc(doc(db, "users", user.uid), {
-            email: user.email,
-            agreedTerms: true,
-            consentAiLearning: agreedAI,
-            lastLogin: serverTimestamp()
-        }, { merge: true });
- 
-        // 🔥 DB 저장이 완료되면 비로소 뒤쪽 로그인 UI를 변경!
-        window.isUserLoggedIn = true;
-        document.getElementById('loggedOutView').style.display = 'none';
-        document.getElementById('loggedInView').style.display = 'flex';
-        document.getElementById('userPhoto').src = user.photoURL;
-        document.getElementById('userName').textContent = user.displayName;
-    }
-};
- 
+
         // ✅ 모달에서 취소 시 로그아웃
         window.cancelConsentAndLogout = async function() {
             await signOut(auth);
         };
-// 이 줄 추가
-let resolveAuthReady;
-window.authReady = new Promise(resolve => { resolveAuthReady = resolve; });
- 
-// 수정된 onAuthStateChanged 코드
-onAuthStateChanged(auth, async (user) => { // async 추가됨
-    if (user) {
-        // 🔥 파이어베이스 인증은 되었지만, DB에 동의 기록이 있는지 한 번 더 확인
-        const userDocSnap = await getDoc(doc(db, "users", user.uid));
-        
-        if (userDocSnap.exists() && userDocSnap.data().agreedTerms === true) {
-            // 찐 로그인 완료 (동의 기록이 있는 유저만 UI 변경)
-            window.isUserLoggedIn = true;
-            document.getElementById('loggedOutView').style.display = 'none';
-            document.getElementById('loggedInView').style.display = 'flex';
-            document.getElementById('userPhoto').src = user.photoURL;
-            document.getElementById('userName').textContent = user.displayName;
-        } else {
-            // 구글 인증만 되고 아직 동의하지 않은 유저라면 뒤쪽 UI를 로그아웃 상태로 유지
-            window.isUserLoggedIn = false;
-        }
-    } else {
-        // 기존 로그아웃 처리 (이 부분은 그대로 둠)
-        window.isUserLoggedIn = false;
-        document.getElementById('loggedInView').style.display = 'none';
-        document.getElementById('loggedOutView').style.display = 'block';
-        document.getElementById('preview').style.display = 'none';
-        document.getElementById('preview').src = '';
-        document.getElementById('resultContainer').innerHTML = '';
-        document.getElementById('resultContainer').style.display = 'none';
-        document.getElementById('disclaimer').style.display = 'none';
-        document.getElementById('feedbackContainer').style.display = 'none';
-        document.getElementById('loading').style.display = 'none';
-        const mockup = document.getElementById('videoMockup');
-        if (mockup) mockup.style.display = 'block';
-    }
-    resolveAuthReady(); // ← 이 줄 추가 (확인 끝났다고 신호)
-});
-        
- 
+
+        let resolveAuthReady;
+        window.authReady = new Promise(resolve => { resolveAuthReady = resolve; });
+
+        // ✅ 페이지 로드 시 자동 로그인 처리 (세션 유지용)
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                // DB에 동의 기록이 있는지 확인
+                const userDocSnap = await getDoc(doc(db, "users", user.uid));
+
+                if (userDocSnap.exists() && userDocSnap.data().agreedTerms === true) {
+                    // 기존 유저 자동 로그인 완료
+                    window.isUserLoggedIn = true;
+                    document.getElementById('loggedOutView').style.display = 'none';
+                    document.getElementById('loggedInView').style.display = 'flex';
+                    document.getElementById('userPhoto').src = user.photoURL;
+                    document.getElementById('userName').textContent = user.displayName;
+                } else {
+                    // 동의 기록 없는 유저 → 로그아웃 상태 유지
+                    window.isUserLoggedIn = false;
+                }
+            } else {
+                // 로그아웃 상태 처리
+                window.isUserLoggedIn = false;
+                document.getElementById('loggedInView').style.display = 'none';
+                document.getElementById('loggedOutView').style.display = 'block';
+                document.getElementById('preview').style.display = 'none';
+                document.getElementById('preview').src = '';
+                document.getElementById('resultContainer').innerHTML = '';
+                document.getElementById('resultContainer').style.display = 'none';
+                document.getElementById('disclaimer').style.display = 'none';
+                document.getElementById('feedbackContainer').style.display = 'none';
+                document.getElementById('loading').style.display = 'none';
+                const mockup = document.getElementById('videoMockup');
+                if (mockup) mockup.style.display = 'block';
+            }
+            resolveAuthReady();
+        });
+
         document.getElementById('btnLogout').addEventListener('click', () => {
             signOut(auth);
         });
- 
+
         window.submitFeedback = async function() {
             const t = getT();
             const text = document.getElementById('feedbackText').value;
             const fileInput = document.getElementById('feedbackImgInput');
             const files = fileInput.files;
             const btn = document.getElementById('btnSubmitFeedback');
- 
-            // 선택된 버튼 타입 확인 (필수)
+
             const selectedTypeBtn = document.querySelector('.feedback-type-btn.selected');
             const feedbackType = selectedTypeBtn ? selectedTypeBtn.dataset.type : null;
- 
+
             if (btn.disabled) return;
             btn.disabled = true;
-            btn.textContent = t.feedbackSending || 'Sending...'; 
- 
+            btn.textContent = t.feedbackSending || 'Sending...';
+
             if (!window.isUserLoggedIn) {
                 alert(t.alertLoginForFeedback);
                 btn.disabled = false;
@@ -245,7 +243,7 @@ onAuthStateChanged(auth, async (user) => { // async 추가됨
                     const url = await getDownloadURL(snapshot.ref);
                     uploadedUrls.push(url);
                 }
- 
+
                 await addDoc(collection(db, "feedbacks"), {
                     feedbackType: feedbackType,
                     content: text,
@@ -268,55 +266,55 @@ onAuthStateChanged(auth, async (user) => { // async 추가됨
                 btn.textContent = t.feedbackSend;
             }
         };
- 
-document.getElementById('btnWithdraw').addEventListener('click', async () => {
-    const t = getT();
-    const user = auth.currentUser;
-    if (!user) return;
- 
-    if (confirm(t.alertWithdrawConfirm)) {
-        try {
-            await reauthenticateWithPopup(user, provider);
- 
-            // 1. 메뉴 데이터 익명화 (uid, userEmail null 처리)
-            const menuQuery = query(collection(db, "valid_menus"), where("uid", "==", user.uid));
-            const menuSnapshot = await getDocs(menuQuery);
-            await Promise.all(menuSnapshot.docs.map(d =>
-                updateDoc(doc(db, "valid_menus", d.id), { uid: null, userEmail: null })
-            ));
- 
-            // 2. 피드백 데이터 익명화 (user null 처리)
-            const feedbackQuery = query(collection(db, "feedbacks"), where("user", "==", user.email));
-            const feedbackSnapshot = await getDocs(feedbackQuery);
-            await Promise.all(feedbackSnapshot.docs.map(d =>
-                updateDoc(doc(db, "feedbacks", d.id), { user: null })
-            ));
- 
-            // 🌟 3. [추가된 부분] users 컬렉션에서 유저의 회원정보 문서 완전히 삭제!
-            await deleteDoc(doc(db, "users", user.uid));
- 
-            // 4. 구글 Authentication에서 유저 계정 영구 삭제
-            await deleteUser(user);
-            
-            alert(t.alertWithdrawSuccess);
-            window.location.reload();
-        } catch (error) {
-            console.error("Account deletion failed:", error);
-            if (error.code === 'auth/popup-closed-by-user') {
-                alert(t.alertReopenWindow);
-            } else {
-                alert(t.alertWithdrawFail);
+
+        document.getElementById('btnWithdraw').addEventListener('click', async () => {
+            const t = getT();
+            const user = auth.currentUser;
+            if (!user) return;
+
+            if (confirm(t.alertWithdrawConfirm)) {
+                try {
+                    await reauthenticateWithPopup(user, provider);
+
+                    // 1. 메뉴 데이터 익명화
+                    const menuQuery = query(collection(db, "valid_menus"), where("uid", "==", user.uid));
+                    const menuSnapshot = await getDocs(menuQuery);
+                    await Promise.all(menuSnapshot.docs.map(d =>
+                        updateDoc(doc(db, "valid_menus", d.id), { uid: null, userEmail: null })
+                    ));
+
+                    // 2. 피드백 데이터 익명화
+                    const feedbackQuery = query(collection(db, "feedbacks"), where("user", "==", user.email));
+                    const feedbackSnapshot = await getDocs(feedbackQuery);
+                    await Promise.all(feedbackSnapshot.docs.map(d =>
+                        updateDoc(doc(db, "feedbacks", d.id), { user: null })
+                    ));
+
+                    // 3. users 컬렉션에서 유저 문서 삭제
+                    await deleteDoc(doc(db, "users", user.uid));
+
+                    // 4. 구글 Authentication에서 계정 삭제
+                    await deleteUser(user);
+
+                    alert(t.alertWithdrawSuccess);
+                    window.location.reload();
+                } catch (error) {
+                    console.error("Account deletion failed:", error);
+                    if (error.code === 'auth/popup-closed-by-user') {
+                        alert(t.alertReopenWindow);
+                    } else {
+                        alert(t.alertWithdrawFail);
+                    }
+                }
             }
-        }
-    }
-});
- 
+        });
+
         window.saveValidMenuToFirebase = async function(file, aiResultText) {
             if (!window.isUserLoggedIn || !auth.currentUser) return;
             try {
                 const safeFileName = auth.currentUser.uid + '_' + Date.now() + '_' + crypto.randomUUID() + '.webp';
                 const storageRef = ref(storage, 'valid_menus/' + safeFileName);
-                const snapshot = await uploadBytes(storageRef, file); // file 자리엔 이미 compressedBlob이 전달됨
+                const snapshot = await uploadBytes(storageRef, file);
                 const imageUrl = await getDownloadURL(snapshot.ref);
                 await addDoc(collection(db, "valid_menus"), {
                     imageUrl: imageUrl,
@@ -333,11 +331,11 @@ document.getElementById('btnWithdraw').addEventListener('click', async () => {
                 if (typeof stopLoading === 'function') stopLoading();
             }
         };
- 
+
         const _s = document.createElement('script');
         _s.src = 'script.js';
         document.body.appendChild(_s);
- 
+
     </script>
 </body>
 </html>
